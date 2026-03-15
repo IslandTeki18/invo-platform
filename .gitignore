@@ -1,0 +1,132 @@
+# -----------------------------
+# ROOT
+# -----------------------------
+
+node_modules
+.pnpm-store
+.pnpm-debug.log
+
+package-lock.json
+yarn.lock
+npm-debug.log*
+pnpm-debug.log*
+
+.env
+.env.*
+!.env.example
+
+.DS_Store
+Thumbs.db
+
+.idea
+.vscode
+*.swp
+*.swo
+
+coverage
+dist
+build
+.tmp
+.temp
+.cache
+
+*.log
+
+# -----------------------------
+# TURBOREPO
+# -----------------------------
+
+.turbo
+
+# -----------------------------
+# TYPESCRIPT
+# -----------------------------
+
+*.tsbuildinfo
+
+# -----------------------------
+# VITE (ADMIN + MARKETING)
+# -----------------------------
+
+apps/admin/node_modules
+apps/admin/dist
+apps/admin/.vite
+apps/admin/.cache
+
+apps/marketing/node_modules
+apps/marketing/dist
+apps/marketing/.vite
+apps/marketing/.cache
+
+# -----------------------------
+# EXPO / REACT NATIVE (MOBILE)
+# -----------------------------
+
+apps/mobile/node_modules
+apps/mobile/.expo
+apps/mobile/.expo-shared
+apps/mobile/web-build
+apps/mobile/dist
+
+# Metro bundler cache
+apps/mobile/.metro-cache
+
+# React Native
+apps/mobile/android/.gradle
+apps/mobile/android/app/build
+apps/mobile/android/build
+apps/mobile/ios/build
+apps/mobile/ios/Pods
+apps/mobile/ios/*.xcworkspace
+
+# Expo local settings
+apps/mobile/.expo/settings.json
+
+# -----------------------------
+# PACKAGES
+# -----------------------------
+
+packages/*/node_modules
+packages/*/dist
+packages/*/build
+
+# -----------------------------
+# TESTING
+# -----------------------------
+
+coverage
+.nyc_output
+
+# -----------------------------
+# LOCAL FILES
+# -----------------------------
+
+*.local
+*.tmp
+*.temp
+*.bak
+
+# -----------------------------
+# OS
+# -----------------------------
+
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# -----------------------------
+# OPTIONAL (IF ADDED LATER)
+# -----------------------------
+
+# nextjs
+.next
+
+# prisma
+prisma/migrations/dev.db
+
+# convex
+.convex
+
+# docker
+.docker
+docker-compose.override.yml

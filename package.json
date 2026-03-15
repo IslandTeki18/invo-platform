@@ -1,0 +1,21 @@
+{
+  "name": "invo-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:mobile": "turbo run dev --filter=mobile",
+    "dev:admin": "turbo run dev --filter=admin",
+    "dev:marketing": "turbo run dev --filter=marketing",
+    "build": "turbo run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.22.0",
+  "devDependencies": {
+    "turbo": "^2.8.17"
+  }
+}
