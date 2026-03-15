@@ -130,3 +130,6 @@ prisma/migrations/dev.db
 # docker
 .docker
 docker-compose.override.yml
+
+# worktrees
+.worktrees
