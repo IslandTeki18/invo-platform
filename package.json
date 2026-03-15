@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "turbo run typecheck",
-    "test": "echo \"No test runner configured yet\""
+    "test": "turbo run test"
   },
   "keywords": [],
   "author": "",

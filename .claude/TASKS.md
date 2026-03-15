@@ -79,63 +79,191 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 2. Shared contracts and utilities
 
 ### 2.1 Shared enums and constants
-- [ ] Define subscription tier enum
-- [ ] Define organization role enum
-- [ ] Define invoice status enum
-- [ ] Define invitation status enum
-- [ ] Define log event type enum
-- [ ] Define manual payment method enum
-- [ ] Define file type allowlist constants
-- [ ] Define storage quota constants by tier
-- [ ] Define org count limit constants by tier
-- [ ] Define email rate limit constants
-- [ ] Define payment attempt rate limit constants
+
+#### Enums
+- [x] Define subscription tier enum (`BASE`, `PLUS`, `PRO`)
+- [x] Define subscription status enum (`ACTIVE`, `PAST_DUE`, `CANCELED`, `INCOMPLETE`)
+- [x] Define organization role enum (`OWNER`, `ADMIN`, `MEMBER`)
+- [x] Define invoice status enum (`DRAFT`, `SENT`, `VIEWED`, `PAID`, `VOID`)
+- [x] Define invitation status enum (`PENDING`, `ACCEPTED`, `REVOKED`, `EXPIRED`)
+- [x] Define manual payment method enum (`CASH`, `CHECK`, `OTHER`)
+- [x] Define log event type enum:
+  - [x] Payment events: `PAYMENT_SUCCESS`, `PAYMENT_FAILURE`, `PAYMENT_LOCKOUT`
+  - [x] Email events: `EMAIL_SENT`, `EMAIL_FAILED`, `EMAIL_RATE_LIMITED`
+  - [x] Auth events: `USER_LOGIN`, `USER_SIGNUP`
+  - [x] Invoice events: `INVOICE_CREATED`, `INVOICE_SENT`, `INVOICE_VIEWED`, `INVOICE_PAID`, `INVOICE_VOIDED`, `INVOICE_EDITED`
+  - [x] Membership events: `MEMBER_ADDED`, `MEMBER_REMOVED`, `MEMBER_ROLE_CHANGED`
+  - [x] Org events: `ORG_CREATED`, `ORG_DELETED`, `ORG_SETTINGS_UPDATED`
+  - [x] Admin events: `ADMIN_REFUND`, `ADMIN_EXPORT`, `ADMIN_IMPERSONATION_START`, `ADMIN_IMPERSONATION_END`
+- [x] Define onboarding step enum (`ACCOUNT_CREATED`, `ORG_CREATED`, `BUSINESS_INFO_SET`, `STRIPE_CONNECTED`)
+- [x] Define Stripe Connect account status enum (`NOT_CONNECTED`, `PENDING`, `CONNECTED`, `CHARGES_ENABLED`)
+- [x] Define downgrade grace period state enum (`ACTIVE`, `EXPIRED`, `CANCELLED`)
+- [x] Define Stripe webhook event type constants (`checkout.session.completed`, `checkout.session.expired`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `account.updated`, `charge.refunded`)
+
+#### Constants
+- [x] Define file type allowlist (images: jpg/png/webp, documents: pdf)
+- [x] Define `MAX_FILE_SIZE_BYTES` (5 MB = 5,242,880)
+- [x] Define `MAX_ATTACHMENTS_PER_INVOICE` (2)
+- [x] Define `ACCESS_TOKEN_LENGTH` (32 hex chars)
+- [x] Define storage quota constants by tier (Base: 500 MB, Plus: 10 GB, Pro: 100 GB)
+- [x] Define org count limit constants by tier (Base: 1, Plus: 5, Pro: 10)
+- [x] Define subscription pricing constants (Base: $19, Plus: $49, Pro: $99)
+- [x] Define email rate limit constants (`EMAIL_RATE_LIMIT_MAX`: 50, `EMAIL_RATE_LIMIT_WINDOW_MS`: 1 hour)
+- [x] Define payment attempt rate limit constants (`PAYMENT_MAX_ATTEMPTS`: 10/hr, `PAYMENT_LOCKOUT_DURATION_MS`: 15 min)
+- [x] Define `GRACE_PERIOD_DAYS` (7)
+- [x] Define `INVITATION_EXPIRY_HOURS` (24)
+- [x] Define `REMINDER_DAYS_BEFORE_DUE` (3)
+- [x] Define `PDF_PREVIEW_CACHE_TTL_MS` (5 min)
 
 ### 2.2 Shared DTOs and types
-- [ ] Define user DTO
-- [ ] Define organization DTO
-- [ ] Define membership DTO
-- [ ] Define invitation DTO
-- [ ] Define client DTO
-- [ ] Define item preset DTO
-- [ ] Define expense DTO
-- [ ] Define invoice DTO
-- [ ] Define line item DTO
-- [ ] Define attachment DTO
-- [ ] Define file metadata DTO
-- [ ] Define log event DTO
-- [ ] Define export payload DTO
+
+#### Core entity types
+- [x] Define user DTO (clerkId, email, subscriptionTier, orgCountLimit, createdAt)
+- [x] Define organization DTO (name, subdomain, businessAddress, logoUrl, storageUsed, createdAt)
+- [x] Define business address DTO (street, city, state, postalCode, country)
+- [x] Define membership DTO (userId, orgId, role, joinedAt)
+- [x] Define invitation DTO (orgId, inviterId, email, role, createdAt, expiresAt, status)
+- [x] Define client DTO (name, email, phone, notes, archived, orgId)
+- [x] Define item preset DTO (name, description, defaultPrice, taxable, userId)
+- [x] Define expense DTO (description, amount, category, orgId)
+
+#### Invoice types
+- [x] Define invoice DTO (orgId, clientSnapshot, lineItems, expenses, subtotal, discount, tax, total, status, accessToken, stripeSessionId, sentAt, paidAt, voidedAt, dueDate, isEdited, createdAt, updatedAt)
+- [x] Define line item DTO (name, description, quantity, unitPrice, taxable, total, imageUrl)
+- [x] Define discount DTO (type: percentage | fixed, value)
+- [x] Define tax data DTO (rate, amount, taxableSubtotal)
+- [x] Define client snapshot DTO (name, email, phone — frozen at send time)
+
+#### File and attachment types
+- [x] Define file metadata DTO (orgId, ownerEntityType, ownerEntityId, mimeType, sizeBytes, storageId, uploadedAt)
+- [x] Define attachment DTO (fileId, invoiceId, displayName)
+
+#### Payment types
+- [x] Define checkout session DTO (stripeSessionId, invoiceId, amount, status, createdAt, completedAt)
+- [x] Define payment record DTO (invoiceId, method, amount, reference, paidAt, paidBy)
+- [x] Define payment attempt DTO (invoiceId, ip, timestamp, success)
+
+#### Stripe integration types
+- [x] Define Stripe subscription DTO (stripeSubscriptionId, stripeCustomerId, tier, status, currentPeriodStart, currentPeriodEnd)
+- [x] Define Stripe Connect account DTO (stripeAccountId, orgId, status, chargesEnabled, detailsSubmitted)
+
+#### Operational types
+- [x] Define onboarding status DTO (accountCreated, orgCreated, businessInfoSet, stripeConnected)
+- [x] Define downgrade grace period DTO (userId, excessOrgIds, graceStartDate, graceEndDate, state)
+- [x] Define invoice view event DTO (invoiceId, timestamp, ip, userAgent, isFirstView)
+- [x] Define rate limit bucket DTO (key, count, windowStart, windowEnd)
+- [x] Define log event DTO (eventType, actorId, orgId, entityType, entityId, metadata, createdAt)
+- [x] Define export payload DTO (orgId, clients, invoices, expenses, memberships, settings, exportedAt)
+
+#### Email template data types
+- [x] Define invoice send email data DTO (invoiceUrl, clientName, orgName, amount, dueDate)
+- [x] Define payment receipt email data DTO (clientName, orgName, amount, paidAt, invoiceUrl)
+- [x] Define reminder email data DTO (clientName, orgName, amount, dueDate, invoiceUrl, reminderType)
 
 ### 2.3 Validation schemas
-- [ ] Create user validation schema
-- [ ] Create organization validation schema
-- [ ] Create client validation schema
-- [ ] Create item preset validation schema
-- [ ] Create expense validation schema
-- [ ] Create invoice draft validation schema
-- [ ] Create invoice send validation schema
-- [ ] Create invitation validation schema
-- [ ] Create file upload validation schema
+- [x] Create user validation schema
+- [x] Create organization creation validation schema
+- [x] Create organization settings update validation schema (name, address, logo)
+- [x] Create business address validation schema (required/optional fields, format constraints)
+- [x] Create client validation schema (email required, unique within org)
+- [x] Create item preset validation schema
+- [x] Create expense validation schema
+- [x] Create line item validation schema (quantity > 0, price >= 0, taxable flag)
+- [x] Create invoice draft validation schema (client, line items, discount bounds)
+- [x] Create invoice send validation schema (totals valid, client email exists, onboarding complete)
+- [x] Create invoice status transition validation (enforce valid state machine: draft->sent, sent->viewed, sent/viewed->paid, draft/sent/viewed->void)
+- [x] Create invitation validation schema (valid email, valid role, not already member)
+- [x] Create file upload validation schema (MIME type in allowlist, size <= MAX_FILE_SIZE_BYTES)
+- [x] Create attachment validation schema (max MAX_ATTACHMENTS_PER_INVOICE per invoice)
+- [x] Create manual payment validation schema (valid method enum, optional reference/notes)
+- [x] Create invoice access token format validation (32 hex chars)
+- [x] Create organization deletion confirmation validation (exact name match)
 
 ### 2.4 Shared utility modules
-- [ ] Create money conversion helpers
-- [ ] Create money formatting helpers
-- [ ] Create decimal quantity parsing helpers
-- [ ] Create invoice calculation engine
-- [ ] Create token generation helper
-- [ ] Create org subdomain generation helper
-- [ ] Create permission check helpers
-- [ ] Create rate limit key helpers
-- [ ] Create file size formatting helper
-- [ ] Create date/due-date helpers
+
+#### Money and math
+- [x] Create money conversion helpers (cents to dollars, dollars to cents)
+- [x] Create money formatting helpers (display with 2 decimals, currency symbol)
+- [x] Create decimal quantity parsing helpers (string to number, precision handling)
+- [x] Create line-item rounding function (consistent rounding strategy at line-item level)
+- [x] Create invoice calculation engine:
+  - [x] Calculate line item totals (quantity * unitPrice, round per line)
+  - [x] Sum line totals into subtotal
+  - [x] Apply discount (percentage or fixed) to subtotal
+  - [x] Filter taxable items and calculate tax after discount
+  - [x] Calculate final total
+
+#### Auth and permissions
+- [x] Create permission check helpers:
+  - [x] `canSendInvoice(role)` — Owner, Admin only
+  - [x] `canManageMembers(role)` — Owner, Admin only
+  - [x] `canManageBilling(role)` — Owner only
+  - [x] `canDeleteOrganization(role)` — Owner only
+  - [x] `canEditDraft(role)` — all roles
+  - [x] `canAccessAdminPanel(user)` — internal admin only (Clerk publicMetadata.isAdmin)
+- [x] Create token generation helper (32-char hex, cryptographically random)
+
+#### URL and path builders
+- [x] Create invoice URL builder (`APP_URL/invoice/{id}?token={token}`)
+- [x] Create file storage path builder (follows 007-file-storage.md conventions):
+  - [x] `orgs/{orgId}/logo.{ext}`
+  - [x] `orgs/{orgId}/invoices/{invoiceId}/attachments/{fileId}.{ext}`
+  - [x] `orgs/{orgId}/invoices/{invoiceId}/items/{itemId}.{ext}`
+  - [x] `orgs/{orgId}/invoices/{invoiceId}/invoice.pdf`
+- [x] Create PDF filename generator (`invoice_{invoiceId}.pdf`)
+- [x] Create org subdomain generation helper (URL-safe random slug)
+
+#### Rate limiting
+- [x] Create rate limit key helpers (generate consistent keys by scope: payment attempts per invoice, emails per org)
+- [x] Create rate limit window calculation (rolling window boundaries, check if within limit)
+
+#### Status and state
+- [x] Create invoice status transition validator (enforce valid state machine)
+- [x] Create payment status checker (can invoice accept payment? — unpaid, not void)
+- [x] Create onboarding status checkers:
+  - [x] `isOrgNameSet(org)`
+  - [x] `isBusinessAddressSet(org)`
+  - [x] `isStripeConnected(org)`
+  - [x] `canSendInvoice(org)` — all readiness gates pass
+- [x] Create subscription tier metadata accessors (get org limit, storage quota, price by tier)
+
+#### Data helpers
+- [x] Create email address normalization (lowercase, trim)
+- [x] Create date/due-date helpers (calculate due date from terms, check if overdue, compute reminder schedule dates)
+- [x] Create file size formatting helper (bytes to human-readable)
 
 ### 2.5 Tests for shared logic
-- [ ] Add invoice math unit tests
-- [ ] Add rounding edge case tests
-- [ ] Add discount ordering tests
-- [ ] Add tax calculation tests
-- [ ] Add token generator tests
-- [ ] Add permission helper tests
+
+#### Invoice math tests
+- [x] Add invoice math unit tests (line totals, subtotals, final totals)
+- [x] Add rounding edge case tests (fractional cents, large quantities)
+- [x] Add discount ordering tests (percentage then total, fixed then total)
+- [x] Add tax calculation tests (taxable vs non-taxable items, tax after discount)
+- [x] Add zero-amount and negative-edge tests
+
+#### Permission tests
+- [x] Add permission helper tests (Owner full access, Admin restrictions, Member restrictions)
+- [x] Add admin panel access tests (Clerk metadata gate)
+
+#### Token and security tests
+- [x] Add token generator tests (length, hex format, uniqueness)
+- [x] Add invoice access token validation tests
+
+#### Status and state machine tests
+- [x] Add invoice status transition tests (valid transitions, rejected invalid transitions)
+- [x] Add payment status checker tests (payable states, non-payable states)
+- [x] Add onboarding readiness gate tests (each gate independently, all gates combined)
+
+#### Rate limiting tests
+- [x] Add rate limit key generation tests (consistent keys, scope isolation)
+- [x] Add rate limit window calculation tests (within window, expired window, boundary cases)
+
+#### Data helper tests
+- [x] Add email address normalization tests (case, whitespace, invalid formats)
+- [x] Add money conversion round-trip tests (cents to dollars and back)
+- [x] Add date/due-date helper tests (overdue detection, reminder schedule)
+- [x] Add invoice URL builder tests (correct format, token encoding)
+- [x] Add file storage path builder tests (all path patterns)
 
 ---
 
