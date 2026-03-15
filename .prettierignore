@@ -1,0 +1,6 @@
+dist
+node_modules
+.turbo
+.expo
+pnpm-lock.yaml
+*.md

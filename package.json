@@ -2,20 +2,28 @@
   "name": "invo-platform",
   "version": "1.0.0",
   "private": true,
-  "description": "",
-  "main": "index.js",
+  "type": "module",
   "scripts": {
     "dev": "turbo run dev --parallel",
     "dev:mobile": "turbo run dev --filter=mobile",
     "dev:admin": "turbo run dev --filter=admin",
     "dev:marketing": "turbo run dev --filter=marketing",
-    "build": "turbo run build"
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "turbo run typecheck",
+    "test": "echo \"No test runner configured yet\""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.22.0",
   "devDependencies": {
-    "turbo": "^2.8.17"
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "prettier": "^3.8.1",
+    "turbo": "^2.8.17",
+    "typescript-eslint": "^8.57.0"
   }
 }

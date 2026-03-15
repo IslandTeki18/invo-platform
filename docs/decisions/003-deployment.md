@@ -27,13 +27,13 @@ Each application in the monorepo has a distinct deployment target suited to its 
 **Rationale:**
 
 - Native Turborepo support (Vercel and Turborepo are the same company); monorepo detection is automatic.
-- Supports subdomain routing: `invo.app` (marketing), `admin.invo.app` (admin).
+- Supports subdomain routing: `invo.app` (marketing + invoice viewer), `admin.invo.app` (admin).
 - Each app is deployed as a separate Vercel project within the monorepo, using the root directory override to point at the relevant app.
 - Preview deploys are generated automatically per pull request.
 
 **Plan:** Vercel Pro ($20/mo) is likely required for team access, custom domains on multiple projects, and higher build concurrency.
 
-**Config files:** None required at this time. Vercel auto-detects Vite apps in monorepos. A `vercel.json` will be added per-app only when custom rewrites or redirects are needed (e.g., invoice viewer routing).
+**Config files:** None required at this time. Vercel auto-detects Vite apps in monorepos. A `vercel.json` will be added per-app only when custom rewrites or redirects are needed (e.g., SPA fallback for the invoice viewer route at `/invoice/:invoiceId`).
 
 ---
 
@@ -94,5 +94,5 @@ Each application in the monorepo has a distinct deployment target suited to its 
 
 ## Context
 
-- **Domain decisions:** `invo.app` (marketing), `admin.invo.app` (admin), `view.invo.app` (invoice viewer) — see `001-domains.md`.
+- **Domain decisions:** `invo.app` (marketing + invoice viewer), `admin.invo.app` (admin) — see `001-domains.md`.
 - **Environment decisions:** local, preview (Vercel preview deploys), production — see `002-environments.md`.

@@ -86,9 +86,8 @@ cp apps/admin/.env.example apps/admin/.env.local
 
 ### App URLs
 
-- `APP_URL` — Base URL for the main app (e.g., `https://invo.app`).
+- `APP_URL` — Base URL for the main app / marketing site (e.g., `https://invo.app`). The invoice viewer is served as a route within this app at `/invoice/{invoiceId}`.
 - `ADMIN_URL` — Base URL for the admin dashboard (e.g., `https://admin.invo.app`).
-- `INVOICE_VIEWER_URL` — Base URL for the invoice viewer (e.g., `https://view.invo.app`).
 
 ---
 

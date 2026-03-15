@@ -9,7 +9,7 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Confirm canonical product domains for: (see `docs/decisions/001-domains.md`)
   - [x] marketing site — `invo.app`
   - [x] admin panel — `admin.invo.app`
-  - [x] public invoice viewer — `view.invo.app/invoice/{id}?token={token}`
+  - [x] public invoice viewer — `invo.app/invoice/{id}?token={token}` (route in marketing app)
   - [x] org subdomain routing — deferred to V2; token-based access sufficient
 - [x] Confirm environment strategy for local, preview, production (see `docs/decisions/002-environments.md`)
 - [x] Confirm deployment targets for each app (see `docs/decisions/003-deployment.md`)
@@ -30,50 +30,48 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 1. Monorepo foundation
 
 ### 1.1 Repo structure
-- [ ] Initialize Turborepo at root
-- [ ] Create `apps/mobile-app`
-- [ ] Create `apps/invoice-viewer`
-- [ ] Create `apps/marketing-site`
-- [ ] Create `apps/admin-panel`
-- [ ] Create `packages/ui`
-- [ ] Create `packages/utils`
-- [ ] Create `packages/types`
-- [ ] Add root `package.json`
-- [ ] Add root Turbo config
-- [ ] Add root TypeScript config
-- [ ] Add root ESLint config
-- [ ] Add root Prettier config
-- [ ] Add `.editorconfig`
-- [ ] Add `.gitignore`
-- [ ] Add `.env.example` files
+- [x] Initialize Turborepo at root
+- [x] Create `apps/mobile`
+- [x] Create `apps/marketing`
+- [x] Create `apps/admin`
+- [x] Create `packages/ui`
+- [x] Create `packages/utils`
+- [x] Create `packages/types`
+- [x] Add root `package.json`
+- [x] Add root Turbo config
+- [x] Add root TypeScript config
+- [x] Add root ESLint config
+- [x] Add root Prettier config
+- [x] Add `.editorconfig`
+- [x] Add `.gitignore`
+- [x] Add `.env.example` files
 
 ### 1.2 App shells
-- [ ] Boot Expo app shell for mobile app
-- [ ] Boot Vite React app shell for invoice viewer
-- [ ] Boot Vite React app shell for marketing site
-- [ ] Boot Vite React app shell for admin panel
-- [ ] Verify each app runs independently
-- [ ] Verify each app can import from shared packages
+- [x] Boot Expo app shell for mobile app
+- [x] Boot Vite React app shell for marketing site (includes invoice viewer route)
+- [x] Boot Vite React app shell for admin panel
+- [x] Verify each app runs independently
+- [x] Verify each app can import from shared packages
 
 ### 1.3 Shared workspace tooling
-- [ ] Configure workspace package manager
-- [ ] Configure TS path aliases across apps/packages
-- [ ] Configure shared build pipeline for packages
-- [ ] Add root scripts for:
-  - [ ] `dev`
-  - [ ] `build`
-  - [ ] `lint`
-  - [ ] `format`
-  - [ ] `typecheck`
-  - [ ] `test`
-- [ ] Add per-app scripts where needed
+- [x] Configure workspace package manager
+- [x] Configure TS path aliases across apps/packages
+- [x] Configure shared build pipeline for packages
+- [x] Add root scripts for:
+  - [x] `dev`
+  - [x] `build`
+  - [x] `lint`
+  - [x] `format`
+  - [x] `typecheck`
+  - [x] `test`
+- [x] Add per-app scripts where needed
 
 ### 1.4 CI
-- [ ] Add CI workflow for install
-- [ ] Add CI workflow for lint
-- [ ] Add CI workflow for typecheck
-- [ ] Add CI workflow for build
-- [ ] Add preview deployment wiring
+- [x] Add CI workflow for install
+- [x] Add CI workflow for lint
+- [x] Add CI workflow for typecheck
+- [x] Add CI workflow for build
+- [x] Add preview deployment wiring
 - [ ] Verify CI passes on clean repo
 
 ---
@@ -570,16 +568,14 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 
 ## 17. Public invoice viewer
 
-### 17.1 Routing and host handling
-- [ ] Configure org subdomain routing
-- [ ] Configure invoice route `/invoice/:invoiceId`
-- [ ] Read token from query string
-- [ ] Resolve invoice by subdomain + invoiceId + token
+### 17.1 Routing (within marketing app)
+- [ ] Add `/invoice/:invoiceId` route to marketing app router
+- [ ] Read `token` from query string
+- [ ] Resolve invoice by invoiceId + token
 
 ### 17.2 Access validation
 - [ ] Reject invalid token
 - [ ] Reject token/invoice mismatch
-- [ ] Reject wrong subdomain
 - [ ] Reject missing invoice
 - [ ] Handle void state correctly
 
