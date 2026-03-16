@@ -322,32 +322,54 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 4. Convex schema foundation
 
 ### 4.1 Core tables
-- [ ] Create users table (created in 3.2 — mark done here, do not recreate)
-- [ ] Create organizations table
-- [ ] Create memberships table
-- [ ] Create invitations table
-- [ ] Create clients table
-- [ ] Create item presets table
-- [ ] Create expenses table
-- [ ] Create invoices table
-- [ ] Create invoice view events table
-- [ ] Create files table
-- [ ] Create logs table
-- [ ] Create rate-limit table/buckets
-- [ ] Create downgrade/grace tracking table if separate
+- [x] Create users table (created in 3.2)
+- [x] Create organizations table (created in 3.2 — matches Organization type)
+- [x] Create memberships table (created in 3.2 — matches Membership type)
+- [x] Create invitations table (orgId, inviterId, email, role, createdAt, expiresAt, status)
+- [x] Create clients table (name, email, phone?, notes?, archived, orgId)
+- [x] Create itemPresets table (name, description?, defaultPrice, taxable, userId)
+- [x] Create expenses table (description, amount, category?, orgId)
+- [x] Create invoices table (orgId, clientSnapshot?, lineItems, expenses, subtotal, discount?, tax?, total, status, accessToken?, stripeSessionId?, sentAt?, paidAt?, voidedAt?, dueDate?, createdAt, updatedAt)
+- [x] Create invoiceViewEvents table (invoiceId, timestamp, ip?, userAgent?, isFirstView)
+- [x] Create files table (orgId, ownerEntityType, ownerEntityId, mimeType, sizeBytes, storageId, logicalPath?, uploadedAt)
+- [x] Create attachments table (fileId, invoiceId, displayName)
+- [x] Create logs table (eventType, actorId?, orgId?, entityType?, entityId?, metadata?, createdAt)
+- [x] Create rateLimitBuckets table (key, count, windowStart, windowEnd)
+- [x] Create downgradeGracePeriods table (userId, excessOrgIds, graceStartDate, graceEndDate, state)
+- [x] Create stripeSubscriptions table (stripeSubscriptionId, stripeCustomerId, userId, tier, status, currentPeriodStart, currentPeriodEnd)
+- [x] Create stripeConnectAccounts table (stripeAccountId, orgId, status, chargesEnabled, detailsSubmitted)
+- [x] Create checkoutSessions table (stripeSessionId, invoiceId, amount, status, createdAt, completedAt?)
+- [x] Create paymentRecords table (invoiceId, method, amount, reference?, paidAt, paidBy)
+- [x] Create paymentAttempts table (invoiceId, ip, timestamp, success)
 
 ### 4.2 Indexes and query planning
-- [ ] Add user lookup by Clerk ID
-- [ ] Add user lookup by email
-- [ ] Add org lookup by subdomain
-- [ ] Add membership lookup by orgId + userId
-- [ ] Add invitation lookup by email + orgId
-- [ ] Add client lookup by orgId + email
-- [ ] Add invoice lookup by orgId + status
-- [ ] Add invoice lookup by access token if needed
-- [ ] Add logs lookup by event type
-- [ ] Add logs lookup by `createdAt`
-- [ ] Add files lookup by orgId
+- [x] Add user lookup by Clerk ID (`users.by_clerkId` — created in 3.2)
+- [x] Add user lookup by email (`users.by_email` — created in 3.2)
+- [x] Add org lookup by subdomain (`organizations.by_subdomain` — created in 3.2)
+- [x] Add membership lookup by orgId + userId (`memberships.by_orgId_userId` — created in 3.2)
+- [x] Add invitation lookup by email + orgId (`invitations.by_email_orgId`)
+- [x] Add invitation lookup by orgId (`invitations.by_orgId`)
+- [x] Add client lookup by orgId + email (`clients.by_orgId_email`)
+- [x] Add client lookup by orgId (`clients.by_orgId`)
+- [x] Add invoice lookup by orgId + status (`invoices.by_orgId_status`)
+- [x] Add invoice lookup by access token (`invoices.by_accessToken`)
+- [x] Add invoiceViewEvents lookup by invoiceId (`invoiceViewEvents.by_invoiceId`)
+- [x] Add files lookup by orgId (`files.by_orgId`)
+- [x] Add attachments lookup by invoiceId (`attachments.by_invoiceId`)
+- [x] Add logs lookup by event type (`logs.by_eventType`)
+- [x] Add logs lookup by createdAt (`logs.by_createdAt`)
+- [x] Add rateLimitBuckets lookup by key (`rateLimitBuckets.by_key`)
+- [x] Add downgradeGracePeriods lookup by userId (`downgradeGracePeriods.by_userId`)
+- [x] Add itemPresets lookup by userId (`itemPresets.by_userId`)
+- [x] Add expenses lookup by orgId (`expenses.by_orgId`)
+- [x] Add stripeSubscriptions lookup by userId (`stripeSubscriptions.by_userId`)
+- [x] Add stripeSubscriptions lookup by stripeSubscriptionId (`stripeSubscriptions.by_stripeSubscriptionId`)
+- [x] Add stripeConnectAccounts lookup by orgId (`stripeConnectAccounts.by_orgId`)
+- [x] Add stripeConnectAccounts lookup by stripeAccountId (`stripeConnectAccounts.by_stripeAccountId`)
+- [x] Add checkoutSessions lookup by stripeSessionId (`checkoutSessions.by_stripeSessionId`)
+- [x] Add checkoutSessions lookup by invoiceId (`checkoutSessions.by_invoiceId`)
+- [x] Add paymentRecords lookup by invoiceId (`paymentRecords.by_invoiceId`)
+- [x] Add paymentAttempts lookup by invoiceId (`paymentAttempts.by_invoiceId`)
 
 ---
 
@@ -545,7 +567,6 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
   - [ ] `status`
   - [ ] `createdAt`
   - [ ] `updatedAt`
-  - [ ] `isInvoiceEdited`
   - [ ] `accessToken`
   - [ ] `stripeSessionId`
 - [ ] Add due date if needed for reminders

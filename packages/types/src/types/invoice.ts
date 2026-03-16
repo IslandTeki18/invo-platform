@@ -46,7 +46,6 @@ export interface Invoice {
   paidAt: number | null;
   voidedAt: number | null;
   dueDate: number | null;
-  isEdited: boolean;
   createdAt: number;
   updatedAt: number;
 }
