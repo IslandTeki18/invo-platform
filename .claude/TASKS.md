@@ -269,40 +269,60 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 
 ## 3. Auth and user bootstrap
 
+### 3.2 Internal user model (schema first — bootstrap and guards depend on this)
+- [x] Create Convex schema for users (this is the canonical users table — section 4.1 should mark it done, not recreate it)
+- [x] Store Clerk user ID on internal user
+- [x] Store email on internal user
+- [x] Store `createdAt` on internal user
+- [x] Store subscription tier on internal user (default: `BASE` per 004-stripe.md)
+- [x] Store `orgCountLimit` on internal user (default: `1` per 004-stripe.md)
+
 ### 3.1 Clerk integration
-- [ ] Integrate Clerk in mobile app
+- [x] Install `@clerk/clerk-react` in admin app
+- [x] Install `@clerk/clerk-react` in marketing app
+- [x] Install `@clerk/clerk-expo` in mobile app
+- [x] Wrap admin app root with `<ClerkProvider>`
+- [x] Wrap marketing app root with `<ClerkProvider>`
+- [x] Wrap mobile app root with `<ClerkProvider>` (with Expo token cache)
+- [x] Wire `VITE_CLERK_PUBLISHABLE_KEY` env var in admin and marketing apps
+- [x] Wire `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` env var in mobile app
+- [ ] Configure Clerk Dashboard: enable email+password, Google OAuth, Apple Sign-In
+- [ ] Integrate Clerk in mobile app (sign-in/sign-up screens)
 - [ ] Integrate Clerk in marketing site auth entry points
 - [ ] Integrate Clerk in admin panel
 - [ ] Integrate Clerk in invite acceptance page
-- [ ] Verify authenticated route protection works
-
-### 3.2 Internal user model
-- [ ] Create Convex schema for users
-- [ ] Store Clerk user ID on internal user
-- [ ] Store email on internal user
-- [ ] Store `createdAt` on internal user
-- [ ] Store subscription tier on internal user
-- [ ] Store `orgCountLimit` on internal user
+- [x] Handle auth loading states (render placeholder while Clerk checks session)
 
 ### 3.3 User bootstrap flow
-- [ ] Implement first-login user bootstrap path
-- [ ] Implement current-user query
-- [ ] Handle returning users cleanly
-- [ ] Backfill missing internal user records if needed
-- [ ] Prevent duplicate user creation
+- [x] Decide bootstrap trigger mechanism — **Convex mutation on first auth** (client-side, no webhook infrastructure needed)
+- [x] Implement first-login user bootstrap path
+- [x] Set default `subscriptionTier = BASE` on new user creation
+- [x] Set default `orgCountLimit = 1` on new user creation
+- [x] Implement current-user query — **Convex-only** (query by clerkId via auth identity)
+- [x] Handle returning users cleanly
+- [x] Handle race condition: two simultaneous first logins for the same Clerk user
+- [x] Prevent duplicate user creation (enforce unique constraint on clerkId)
+- [x] Decide backfill strategy — **on-demand at login** (bootstrap mutation handles it)
+- [x] Backfill missing internal user records if needed
+- [x] Coordinate timing with Stripe webhook for subscription creation — **N/A at bootstrap time** (defaults to BASE; section 27 handles Stripe sync)
 
 ### 3.4 Auth guards
-- [ ] Build authenticated mutation guard
-- [ ] Build authenticated query guard
-- [ ] Build admin-panel-only guard
-- [ ] Build org membership access guard
+- [x] Decide admin guard approach — **`publicMetadata.isAdmin` check** via Clerk JWT identity
+- [x] Decide guard implementation pattern — **Convex wrapper functions** (higher-order helpers in `convex/lib/auth.ts`)
+- [x] Decide org membership guard query strategy — **DB query per request** (Convex is fast, avoids cache invalidation)
+- [x] Define error response format — **`ConvexError({ code, message })`** with codes: `UNAUTHENTICATED`, `USER_NOT_FOUND`, `FORBIDDEN`
+- [x] Build authenticated mutation guard (Convex function level)
+- [x] Build authenticated query guard (Convex function level)
+- [x] Build admin-panel-only guard
+- [x] Build org membership access guard
+- [ ] Verify authenticated route protection works (depends on Clerk Dashboard setup and sign-in screens)
 
 ---
 
 ## 4. Convex schema foundation
 
 ### 4.1 Core tables
-- [ ] Create users table
+- [ ] Create users table (created in 3.2 — mark done here, do not recreate)
 - [ ] Create organizations table
 - [ ] Create memberships table
 - [ ] Create invitations table

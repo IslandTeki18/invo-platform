@@ -25,5 +25,8 @@
     "prettier": "^3.8.1",
     "turbo": "^2.8.17",
     "typescript-eslint": "^8.57.0"
+  },
+  "dependencies": {
+    "convex": "^1.33.1"
   }
 }
