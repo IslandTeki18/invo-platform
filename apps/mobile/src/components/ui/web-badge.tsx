@@ -3,8 +3,8 @@ import { Image } from 'expo-image';
 import React from 'react';
 import { useColorScheme, StyleSheet } from 'react-native';
 
-import { ThemedText } from './themed-text';
-import { ThemedView } from './themed-view';
+import { ThemedText } from '../primitives/themed-text';
+import { ThemedView } from '../primitives/themed-view';
 
 import { Spacing } from '@/constants/theme';
 

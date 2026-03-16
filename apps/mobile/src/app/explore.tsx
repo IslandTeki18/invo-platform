@@ -4,11 +4,12 @@ import React from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ExternalLink } from '@/components/external-link';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
+import { ThemedText } from '@/components/primitives/themed-text';
+import { ThemedView } from '@/components/primitives/themed-view';
 import { Collapsible } from '@/components/ui/collapsible';
-import { WebBadge } from '@/components/web-badge';
+import { ExternalLink } from '@/components/ui/external-link';
+import { WebBadge } from '@/components/ui/web-badge';
+import { CommonStyles } from '@/constants/styles';
 import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 
@@ -46,7 +47,7 @@ export default function TabTwoScreen() {
           </ThemedText>
 
           <ExternalLink href="https://docs.expo.dev" asChild>
-            <Pressable style={({ pressed }) => pressed && styles.pressed}>
+            <Pressable style={({ pressed }) => pressed && CommonStyles.pressed}>
               <ThemedView type="backgroundElement" style={styles.linkButton}>
                 <ThemedText type="link">Expo documentation</ThemedText>
                 <SymbolView
@@ -146,9 +147,6 @@ const styles = StyleSheet.create({
   },
   centerText: {
     textAlign: 'center',
-  },
-  pressed: {
-    opacity: 0.7,
   },
   linkButton: {
     flexDirection: 'row',

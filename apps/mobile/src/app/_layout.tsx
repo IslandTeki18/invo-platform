@@ -6,8 +6,8 @@ import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+import { AnimatedSplashOverlay } from '@/components/animated-icon/animated-icon';
+import AppTabs from '@/components/app-tabs/app-tabs';
 
 const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL!;
 
