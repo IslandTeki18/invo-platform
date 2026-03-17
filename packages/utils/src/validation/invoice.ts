@@ -27,11 +27,11 @@ export const invoiceDraftSchema = z.object({
   discount: z
     .object({
       type: z.enum(["percentage", "fixed"]),
-      value: z.number().nonnegative(),
+      value: z.number().nonnegative().max(100),
     })
     .nullable()
     .optional(),
-  taxRate: z.number().nonnegative().optional(),
+  taxRate: z.number().nonnegative().max(100).optional(),
   dueDate: z.number().int().positive().optional(),
 });
 

@@ -594,35 +594,35 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 12. Invoice math engine
 
 ### 12.1 Money rules
-- [ ] Store all money in cents
-- [ ] Format money with exactly two decimals in UI
-- [ ] Support decimal quantity for line items
-- [ ] Round at line-item level
+- [x] Store all money in cents
+- [x] Format money with exactly two decimals in UI
+- [x] Support decimal quantity for line items
+- [x] Round at line-item level
 
 ### 12.2 Calculation order
-- [ ] Calculate line totals first
-- [ ] Sum line totals into subtotal
-- [ ] Apply discount to subtotal
-- [ ] Apply tax after discount
-- [ ] Calculate final total
+- [x] Calculate line totals first
+- [x] Sum line totals into subtotal
+- [x] Apply discount to subtotal
+- [x] Apply tax after discount
+- [x] Calculate final total
 
 ### 12.3 Discount support
-- [ ] Support percentage discount
-- [ ] Support fixed-amount discount
-- [ ] Prevent discount from producing invalid negative totals unless explicitly allowed
+- [x] Support percentage discount
+- [x] Support fixed-amount discount
+- [x] Prevent discount from producing invalid negative totals unless explicitly allowed
 
 ### 12.4 Tax support
-- [ ] Integrate Stripe Tax-compatible calculation inputs
-- [ ] Store tax result on invoice
-- [ ] Ensure tax can be configured per invoice
+- [x] Integrate Stripe Tax-compatible calculation inputs
+- [x] Store tax result on invoice
+- [x] Ensure tax can be configured per invoice
 
 ### 12.5 Tests
-- [ ] Test decimal quantity cases
-- [ ] Test rounding edge cases
-- [ ] Test fixed discount cases
-- [ ] Test percentage discount cases
-- [ ] Test zero-tax cases
-- [ ] Test multi-line mixed-taxable cases
+- [x] Test decimal quantity cases
+- [x] Test rounding edge cases
+- [x] Test fixed discount cases
+- [x] Test percentage discount cases
+- [x] Test zero-tax cases
+- [x] Test multi-line mixed-taxable cases
 
 ---
 

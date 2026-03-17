@@ -24,7 +24,7 @@ export function applyDiscount(
     return subtotal;
   }
   if (discount.type === "percentage") {
-    return Math.round(subtotal * (1 - discount.value / 100));
+    return Math.max(0, Math.round(subtotal * (1 - discount.value / 100)));
   }
   return Math.max(0, subtotal - discount.value);
 }
