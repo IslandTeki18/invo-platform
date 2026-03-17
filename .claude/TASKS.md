@@ -376,35 +376,35 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 5. Organization core
 
 ### 5.1 Organization creation
-- [ ] Create organization mutation
-- [ ] Generate immutable random subdomain
-- [ ] Enforce subdomain uniqueness
-- [ ] Store name
-- [ ] Store business address fields
-- [ ] Store `logoUrl` placeholder
-- [ ] Store `createdAt`
-- [ ] Store tier or derived billing state as designed
-- [ ] Store `storageUsed`
-- [ ] Create owner membership automatically
+- [x] Create organization mutation
+- [x] Generate immutable random subdomain
+- [x] Enforce subdomain uniqueness
+- [x] Store name
+- [x] Store business address fields
+- [x] Store `logoUrl` placeholder
+- [x] Store `createdAt`
+- [x] Store tier or derived billing state as designed
+- [x] Store `storageUsed`
+- [x] Create owner membership automatically
 
 ### 5.2 Org count enforcement
-- [ ] Enforce org limit on create
-- [ ] Return clear over-limit error
-- [ ] Verify Base tier org cap = 1
-- [ ] Verify Plus tier org cap = 5
-- [ ] Verify Pro tier org cap = 10
+- [x] Enforce org limit on create
+- [x] Return clear over-limit error
+- [x] Verify Base tier org cap = 1
+- [x] Verify Plus tier org cap = 5
+- [x] Verify Pro tier org cap = 25 (corrected from 10 — see `ORG_COUNT_LIMIT_BY_TIER` in constants)
 
 ### 5.3 Current org selection
-- [ ] Add current organization query
-- [ ] Add org switcher support
-- [ ] Persist selected org state in app
-- [ ] Handle no-org state cleanly
+- [x] Add current organization query
+- [x] Add org switcher support
+- [x] Persist selected org state in app
+- [x] Handle no-org state cleanly
 
 ### 5.4 Organization settings
-- [ ] Build org settings update mutation
+- [x] Build org settings update mutation
 - [ ] Build org profile screen
-- [ ] Make subdomain read-only after creation
-- [ ] Display storage usage in org settings
+- [x] Make subdomain read-only after creation
+- [x] Display storage usage in org settings
 
 ---
 

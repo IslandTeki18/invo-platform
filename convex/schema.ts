@@ -44,7 +44,9 @@ export default defineSchema({
     orgId: v.id("organizations"),
     role: organizationRoleValidator,
     joinedAt: v.number(),
-  }).index("by_orgId_userId", ["orgId", "userId"]),
+  })
+    .index("by_orgId_userId", ["orgId", "userId"])
+    .index("by_userId", ["userId"]),
 
   invitations: defineTable({
     orgId: v.id("organizations"),
