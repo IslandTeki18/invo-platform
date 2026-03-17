@@ -554,40 +554,40 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 11. Invoice domain model
 
 ### 11.1 Invoice fields
-- [ ] Create invoice fields:
-  - [ ] `id`
-  - [ ] `orgId`
-  - [ ] `clientSnapshot`
-  - [ ] `lineItems`
-  - [ ] `expenses`
-  - [ ] `subtotal`
-  - [ ] `discount`
-  - [ ] `tax`
-  - [ ] `total`
-  - [ ] `status`
-  - [ ] `createdAt`
-  - [ ] `updatedAt`
-  - [ ] `accessToken`
-  - [ ] `stripeSessionId`
-- [ ] Add due date if needed for reminders
-- [ ] Add `sentAt` if needed
-- [ ] Add `paidAt` if needed
-- [ ] Add `voidedAt` if needed
-- [ ] Add manual payment metadata if needed
+- [x] Create invoice fields:
+  - [x] `id`
+  - [x] `orgId`
+  - [x] `clientSnapshot`
+  - [x] `lineItems`
+  - [x] `expenses`
+  - [x] `subtotal`
+  - [x] `discount`
+  - [x] `tax`
+  - [x] `total`
+  - [x] `status`
+  - [x] `createdAt`
+  - [x] `updatedAt`
+  - [x] `accessToken`
+  - [x] `stripeSessionId`
+- [x] Add due date if needed for reminders
+- [x] Add `sentAt` if needed
+- [x] Add `paidAt` if needed
+- [x] Add `voidedAt` if needed
+- [x] Add manual payment metadata if needed — stored in separate `paymentRecords` table (normalized)
 
 ### 11.2 Status lifecycle
-- [ ] Define valid transitions:
-  - [ ] `draft -> sent`
-  - [ ] `sent -> viewed`
-  - [ ] `sent/viewed -> paid`
-  - [ ] `draft/sent/viewed -> void`
-- [ ] Block invalid transitions
+- [x] Define valid transitions:
+  - [x] `draft -> sent`
+  - [x] `sent -> viewed`
+  - [x] `sent/viewed -> paid`
+  - [x] `draft/sent/viewed -> void`
+- [x] Block invalid transitions
 
 ### 11.3 Snapshot policy
-- [ ] Snapshot client data into invoice
-- [ ] Snapshot line item data into invoice
-- [ ] Snapshot expense data into invoice
-- [ ] Decide whether branding snapshot is needed for historical accuracy
+- [x] Snapshot client data into invoice
+- [x] Snapshot line item data into invoice
+- [x] Snapshot expense data into invoice
+- [x] Decide whether branding snapshot is needed for historical accuracy — deferred to V2; PDF captures branding at generation time
 
 ---
 
