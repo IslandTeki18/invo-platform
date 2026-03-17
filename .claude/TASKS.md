@@ -501,19 +501,19 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 9. Item presets
 
 ### 9.1 Data model
-- [ ] Create item preset fields:
-  - [ ] `name`
-  - [ ] `description`
-  - [ ] `defaultPrice`
-  - [ ] `taxable`
-  - [ ] `userId`
-- [ ] Confirm no image support in V1
+- [x] Create item preset fields:
+  - [x] `name`
+  - [x] `description`
+  - [x] `defaultPrice`
+  - [x] `taxable`
+  - [x] `userId`
+- [x] Confirm no image support in V1
 
 ### 9.2 CRUD
-- [ ] Add create preset mutation
-- [ ] Add edit preset mutation
-- [ ] Add delete preset mutation
-- [ ] Add list presets query
+- [x] Add create preset mutation
+- [x] Add edit preset mutation
+- [x] Add delete preset mutation
+- [x] Add list presets query
 
 ### 9.3 UI
 - [ ] Build item preset list
@@ -521,23 +521,23 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [ ] Build preset picker inside invoice editor
 
 ### 9.4 Safety
-- [ ] Verify deleting preset does not mutate existing invoices
+- [x] Verify deleting preset does not mutate existing invoices
 
 ---
 
 ## 10. Expenses
 
 ### 10.1 Data model
-- [ ] Create expense fields
-- [ ] Scope expenses by organization
-- [ ] Support amount stored in cents
-- [ ] Support attachment to multiple invoices via duplication
+- [x] Create expense fields
+- [x] Scope expenses by organization
+- [x] Support amount stored in cents
+- [x] Support attachment to multiple invoices via duplication
 
 ### 10.2 CRUD
-- [ ] Add create expense mutation
-- [ ] Add edit expense mutation
-- [ ] Add archive/delete strategy if needed
-- [ ] Add list expenses query
+- [x] Add create expense mutation
+- [x] Add edit expense mutation
+- [x] Add archive/delete strategy if needed
+- [x] Add list expenses query
 
 ### 10.3 UI
 - [ ] Build expense list screen
@@ -546,8 +546,8 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [ ] Build expense picker in invoice composer
 
 ### 10.4 Rules
-- [ ] Ensure each attached expense is duplicated into invoice snapshot
-- [ ] Ensure original expense edits do not mutate sent invoice data
+- [x] Ensure each attached expense is duplicated into invoice snapshot
+- [x] Ensure original expense edits do not mutate sent invoice data
 
 ---
 
