@@ -411,31 +411,31 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 6. Memberships and roles
 
 ### 6.1 Permission matrix implementation
-- [ ] Implement Owner permissions
-- [ ] Implement Admin permissions
-- [ ] Implement Member permissions
-- [ ] Block Member from sending invoices
-- [ ] Block Member from inviting members
-- [ ] Block Admin from managing billing
-- [ ] Block Admin from deleting organization
+- [x] Implement Owner permissions
+- [x] Implement Admin permissions
+- [x] Implement Member permissions
+- [x] Block Member from sending invoices
+- [x] Block Member from inviting members
+- [x] Block Admin from managing billing
+- [x] Block Admin from deleting organization
 
 ### 6.2 Membership queries and mutations
-- [ ] Add membership list query by org
-- [ ] Add membership detail query
-- [ ] Add role update mutation
-- [ ] Add remove member mutation
-- [ ] Add leave organization mutation
+- [x] Add membership list query by org
+- [x] Add membership detail query
+- [x] Add role update mutation
+- [x] Add remove member mutation
+- [x] Add leave organization mutation
 
 ### 6.3 Continuity rules
-- [ ] Block owner removal
-- [ ] Ensure org always has at least one admin/owner
-- [ ] Prevent invalid role change that leaves no admin/owner
-- [ ] Handle owner leaving with destructive confirmation flow
+- [x] Block owner removal
+- [x] Ensure org always has at least one admin/owner
+- [x] Prevent invalid role change that leaves no admin/owner
+- [x] Handle owner leaving with destructive confirmation flow
 
 ### 6.4 Permission tests
-- [ ] Test Owner full access
-- [ ] Test Admin restrictions
-- [ ] Test Member restrictions
+- [x] Test Owner full access
+- [x] Test Admin restrictions
+- [x] Test Member restrictions
 - [ ] Test continuity rules
 
 ---

@@ -46,6 +46,7 @@ export default defineSchema({
     joinedAt: v.number(),
   })
     .index("by_orgId_userId", ["orgId", "userId"])
+    .index("by_orgId", ["orgId"])
     .index("by_userId", ["userId"]),
 
   invitations: defineTable({
