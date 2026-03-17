@@ -468,27 +468,27 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 8. Client system
 
 ### 8.1 Data model
-- [ ] Create client fields:
-  - [ ] `name`
-  - [ ] `email`
-  - [ ] `phone`
-  - [ ] `notes`
-  - [ ] `archived`
-  - [ ] `orgId`
-- [ ] Make email required
-- [ ] Scope clients by organization
+- [x] Create client fields:
+  - [x] `name`
+  - [x] `email`
+  - [x] `phone`
+  - [x] `notes`
+  - [x] `archived`
+  - [x] `orgId`
+- [x] Make email required
+- [x] Scope clients by organization
 
 ### 8.2 CRUD
-- [ ] Add create client mutation
-- [ ] Add edit client mutation
-- [ ] Add archive client mutation
-- [ ] Add restore client mutation
-- [ ] Block hard delete in normal flow
+- [x] Add create client mutation
+- [x] Add edit client mutation
+- [x] Add archive client mutation
+- [x] Add restore client mutation
+- [x] Block hard delete in normal flow
 
 ### 8.3 Rules
-- [ ] Block duplicate email within organization
-- [ ] Hide archived clients from picker
-- [ ] Support viewing archived clients separately
+- [x] Block duplicate email within organization
+- [x] Hide archived clients from picker
+- [x] Support viewing archived clients separately
 
 ### 8.4 UI
 - [ ] Build client list screen
