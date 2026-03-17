@@ -443,18 +443,18 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 7. Onboarding system
 
 ### 7.1 Onboarding state
-- [ ] Define onboarding steps data model
-- [ ] Create onboarding status query
-- [ ] Track account completion
-- [ ] Track organization creation completion
-- [ ] Track business information completion
-- [ ] Track Stripe Connect setup completion
+- [x] Define onboarding steps data model
+- [x] Create onboarding status query
+- [x] Track account completion
+- [x] Track organization creation completion
+- [x] Track business information completion
+- [x] Track Stripe Connect setup completion
 
 ### 7.2 Readiness gates
-- [ ] Create helper: organization name set
-- [ ] Create helper: business address set
-- [ ] Create helper: Stripe connected
-- [ ] Create helper: can send invoice
+- [x] Create helper: organization name set
+- [x] Create helper: business address set
+- [x] Create helper: Stripe connected
+- [x] Create helper: can send invoice
 - [ ] Enforce send block if onboarding incomplete
 
 ### 7.3 UI
