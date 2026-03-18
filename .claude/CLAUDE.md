@@ -1,48 +1,166 @@
 # CLAUDE.md
 
-## Project Overview
+## Product
 
-**invo-platform** is a Turborepo monorepo containing three applications and shared packages, managed with pnpm.
+**invo-platform** is an invoicing SaaS. Users create organizations, manage clients, build invoices, send them via tokenized public links, and collect payments through Stripe. The mobile app is the primary product surface.
 
-## Monorepo Structure
+## Monorepo
 
-### Apps
+Turborepo + pnpm (v10, `shamefully-hoist=true`, `auto-install-peers=true`).
 
-- **apps/admin** — Internal admin dashboard. React + TypeScript + Vite. Uses react-router-dom for routing. Currently minimal (Hello World route). Tailwind CSS configured but uses nativewind preset.
-- **apps/marketing** — Public marketing site. React + TypeScript + Vite. Contains the default Vite starter template with a counter demo and branding. Same Tailwind/nativewind preset setup as admin.
-- **apps/mobile** — React Native mobile app built with Expo (SDK 55). Uses file-based routing via expo-router with a tab navigator (Home + Explore). Includes react-native-reanimated, react-native-safe-area-context, nativewind, and react-native-svg.
+```
+apps/
+  mobile/      — Expo 55, React Native 0.83, expo-router (file-based), NativeWind
+  marketing/   — Vite 8, React 19, react-router-dom 7, Tailwind CSS 4
+  admin/       — Vite 8, React 19, react-router-dom 7, Tailwind CSS 4
 
-### Packages
+packages/
+  types/       — Shared enums, DTOs, constants (@repo/types)
+  utils/       — Shared logic: invoice math, permissions, validation, token helpers (@repo/utils)
+  ui/          — Shared UI components (@repo/ui)
+```
 
-- **packages/types** — Shared TypeScript types. Entry point at `src/index.ts`. Referenced via `@repo/types` path alias in the root tsconfig.
-- **packages/ui** — Shared UI components. Entry point at `src/index.ts`. Referenced via `@repo/ui` path alias.
-- **packages/utils** — Shared utility functions. Entry point at `src/index.ts`. Referenced via `@repo/utils` path alias.
+Package aliases resolve via root `tsconfig.json` paths: `@repo/types`, `@repo/ui`, `@repo/utils` → `packages/*/src`.
 
-## Key Technologies
+Mobile app uses `@/*` → `./src/*` and `@/assets/*` → `./assets/*`.
 
-- **Package Manager:** pnpm (v10.22.0) with hoisted node_modules (`shamefully-hoist=true`)
-- **Monorepo Orchestration:** Turborepo
-- **Web Apps:** React 19, Vite 8, TypeScript ~5.9, react-router-dom 7
-- **Mobile App:** Expo 55, React Native 0.83, React 19.2.0
-- **Styling:** Tailwind CSS 4 (web apps use nativewind preset in tailwind config; mobile uses nativewind)
-- **Linting:** ESLint 9 with typescript-eslint (root + all packages); web apps add react-hooks/react-refresh plugins
-- **Formatting:** Prettier (root config)
-- **CI:** GitHub Actions (install, lint, typecheck, build)
+## Stack
+
+| Layer | Tool |
+|-------|------|
+| Backend + DB | Convex |
+| Auth | Clerk (`@clerk/clerk-react` web, `@clerk/clerk-expo` mobile) |
+| Payments | Stripe Billing (subscriptions), Stripe Checkout (invoice payments), Stripe Connect (org payouts) |
+| Email | Resend |
+| PDF | Server-side HTML-to-PDF |
+| Styling (web) | Tailwind CSS 4 + ShadCN |
+| Styling (mobile) | NativeWind |
 
 ## Commands
 
-- `pnpm dev` — Run all apps in parallel
-- `pnpm dev:mobile` / `pnpm dev:admin` / `pnpm dev:marketing` — Run a single app
-- `pnpm build` — Build all apps
-- `pnpm lint` — Lint all apps and packages
-- `pnpm typecheck` — Type-check all apps and packages
-- `pnpm format` — Format all files with Prettier
-- `pnpm format:check` — Check formatting without writing
+```sh
+pnpm dev                # all apps
+pnpm dev:mobile         # mobile only
+pnpm dev:admin          # admin only
+pnpm dev:marketing      # marketing only
+pnpm build              # build all
+pnpm lint               # ESLint all
+pnpm typecheck          # tsc all
+pnpm format             # Prettier write
+pnpm format:check       # Prettier check
+```
 
-## Notable Configuration Details
+## Architecture Decisions
 
-- The root `tsconfig.json` defines path aliases for `@repo/types`, `@repo/ui`, and `@repo/utils` pointing to their respective `src` directories.
-- Web apps (admin, marketing) use Vite with `@vitejs/plugin-react` and have separate tsconfig files for app code vs node/vite config.
-- The mobile app uses Expo's tsconfig base with `@/*` path aliases mapping to `./src/*` and `@/assets/*` mapping to `./assets/*`.
-- Both web app `tailwind.config.js` files reference `nativewind/preset`, which is a dependency of the mobile app — this may be intentional for shared styling or a leftover from initial setup.
-- The `.npmrc` is configured for hoisted installs with `auto-install-peers=true`.
+All recorded in `docs/decisions/`. Read the relevant decision doc before working in that area.
+
+| Doc | Topic |
+|-----|-------|
+| 001-domains.md | URL structure — no org subdomains in V1, token-based access |
+| 002-environments.md | Local / preview / production env strategy |
+| 003-deployment.md | Deploy targets per app |
+| 004-stripe.md | Billing tiers, Connect (Express, destination charges), Checkout (payment mode) |
+| 005-clerk.md | Clerk instance setup |
+| 006-resend.md | Email domain and identity |
+| 007-file-storage.md | Convex file storage paths and conventions |
+| 008-pdf-rendering.md | PDF generation approach |
+| 009-owner-leaving.md | Owner leave = org deletion |
+| 010-sent-invoice-edits.md | Sent invoice edit policy |
+
+## Domain Model
+
+### Key Entities (Convex tables)
+
+**users** — Clerk-mapped. Stores subscriptionTier, orgCountLimit.
+**organizations** — Workspace container. Immutable subdomain. Stores businessAddress, logoUrl, storageUsed.
+**memberships** — User ↔ Org with role (OWNER | ADMIN | MEMBER).
+**invitations** — Email invite, 24hr expiry, revocable.
+**clients** — Org-scoped. Email required + unique per org. Archive instead of delete.
+**itemPresets** — User-scoped reusable line item templates. No images in V1.
+**expenses** — Org-scoped. Duplicated into invoice snapshot on attach.
+**invoices** — Core entity. Contains clientSnapshot, lineItems, expenses (all snapshotted at send time), discount, tax, total, status, accessToken.
+**invoiceViewEvents** — Append-only view tracking. Internal only in V1.
+**files** — Org-scoped file metadata (orgId, ownerEntityType, ownerEntityId, mimeType, sizeBytes, storageId).
+**attachments** — Links files to invoices. Max 2 per invoice, max 5MB each.
+**logs** — Audit log. 30-day retention.
+**rateLimitBuckets** — Payment attempts (10/hr, 15min lockout) and email sends (50/hr per org).
+**stripeSubscriptions** — Synced from Stripe Billing webhooks.
+**stripeConnectAccounts** — Per-org Stripe Connect state.
+**checkoutSessions** — Stripe Checkout session records.
+**paymentRecords** — Completed payments (Stripe or manual: cash/check/other).
+**paymentAttempts** — Rate limit tracking for payment abuse.
+**downgradeGracePeriods** — 7-day grace on tier downgrade; excess orgs go read-only then auto-delete.
+
+### Invoice Status Machine
+
+```
+draft → sent → viewed → paid
+                  ↘       ↗
+draft/sent/viewed → void
+```
+
+Valid transitions only: `draft→sent`, `sent→viewed`, `sent/viewed→paid`, `draft/sent/viewed→void`.
+
+### Subscription Tiers
+
+| Tier | Price | Org Limit | Storage |
+|------|-------|-----------|---------|
+| BASE | $19 | 1 | 500MB |
+| PLUS | $49 | 5 | 10GB |
+| PRO | $99 | 25 | 100GB |
+
+### Role Permissions
+
+**Owner** — full control including billing and org deletion.
+**Admin** — everything except billing and org deletion.
+**Member** — create drafts and manage clients only. Cannot send invoices or invite members.
+
+## Critical Business Rules
+
+- **Money in cents.** All monetary values stored as integers (cents). Format to 2 decimals only in UI.
+- **Round at line-item level.** `quantity × unitPrice` rounded per line, then summed.
+- **Calculation order:** subtotal → discount → tax → total.
+- **Snapshot at send time.** Client, line items, expenses, and totals are frozen into the invoice when sent. Edits to source entities do not mutate sent invoices.
+- **One canonical invoice math engine** in `packages/utils`. Used by mobile preview, backend validation, public viewer, and PDF generation. Never duplicate this logic.
+- **Onboarding gate.** Invoices cannot be sent until: org name set, business address set, Stripe connected.
+- **Invoice public URL:** `{APP_URL}/invoice/{invoiceId}?token={32charHex}`. Token required for access.
+- **Owner leaving deletes the org.** Requires typing org name to confirm.
+- **Org must always have ≥1 owner/admin.** Block removals or role changes that violate this.
+
+## Convex Patterns
+
+- Auth guards are higher-order wrappers in `convex/lib/auth.ts`.
+- Error format: `ConvexError({ code, message })` with codes `UNAUTHENTICATED`, `USER_NOT_FOUND`, `FORBIDDEN`.
+- User bootstrap: client-side Convex mutation on first auth (no webhook). Race-safe with unique constraint on clerkId.
+- Admin check: `publicMetadata.isAdmin` from Clerk JWT identity.
+- All indexes are defined in `convex/schema.ts`. Check existing indexes before adding queries.
+
+## Current Implementation Status
+
+**Complete:** Monorepo structure, shared packages (types/utils with full enums, constants, DTOs, validators), Convex schema (all tables + indexes), auth integration (Clerk providers in all apps), user bootstrap flow, auth guards, organization CRUD with subdomain generation and tier enforcement, membership system with full permission matrix and continuity rules, onboarding state model and readiness helpers, client CRUD with archive/duplicate-email rules, item preset CRUD, expense CRUD with snapshot duplication, invoice math engine with full test coverage, invoice domain model and status machine.
+
+**In progress:** Draft invoice backend mutations and queries (section 13), Clerk dashboard config and sign-in screens, onboarding UI, org profile screen.
+
+**Not started:** Invoice composer UI, send flow, public viewer, payments, PDF generation, email/reminders, file uploads/storage quotas, invitation UI, subscription billing sync, downgrade grace, dashboard, admin panel, export, security hardening, tests beyond utils.
+
+Reference `docs/TASKS.md` for the full checklist with completion status.
+
+## File Conventions
+
+- Convex functions: `convex/` directory. Mutations, queries, and actions follow Convex conventions.
+- Shared logic goes in `packages/utils/src/`. Pure functions, no framework dependencies.
+- Shared types go in `packages/types/src/`. Enums, DTOs, constants.
+- Mobile screens: `apps/mobile/src/` with expo-router file-based routing.
+- Web apps: standard Vite + React structure with react-router-dom.
+- File storage paths follow `007-file-storage.md`: `orgs/{orgId}/logo.{ext}`, `orgs/{orgId}/invoices/{invoiceId}/attachments/{fileId}.{ext}`, etc.
+
+## Working Guidelines
+
+1. **Read the decision doc first** if your task touches domains, Stripe, Clerk, file storage, PDF, or deletion behavior.
+2. **Check `packages/types/src/`** before defining new types — it likely already exists.
+3. **Check `packages/utils/src/`** before writing helpers — permission checks, money math, validation, token generation, rate limit logic, and status checks are already implemented and tested.
+4. **Check `convex/schema.ts`** before creating tables or indexes — the full schema is already defined.
+5. **Never duplicate invoice math.** Import from `@repo/utils`.
+6. **Recalculate totals server-side** on every invoice save. Never trust client-computed totals.
+7. **Use existing auth guard wrappers** from `convex/lib/auth.ts` for all mutations and queries requiring auth.
+8. **Test against existing test patterns** in `packages/utils/src/` when adding new shared logic.
