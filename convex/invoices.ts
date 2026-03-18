@@ -1,9 +1,12 @@
 import { v, ConvexError } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { DatabaseReader } from "./_generated/server";
 import { requireOrgMember } from "./lib/auth";
 import {
   calculateInvoiceTotal,
   calculateLineItemTotal,
+  calculateSubtotal,
 } from "@repo/utils";
 import { InvoiceStatus } from "@repo/types";
 
@@ -15,15 +18,23 @@ function generateId(): string {
   return crypto.randomUUID();
 }
 
-function validateLineItems(
-  lineItems: Array<{
-    name: string;
-    description?: string;
-    quantity: number;
-    unitPrice: number;
-    taxable: boolean;
-  }>,
-): void {
+type RawLineItem = {
+  name: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  taxable: boolean;
+};
+
+type ExpenseSnapshot = {
+  id: string;
+  description: string;
+  amount: number;
+  category?: string;
+  orgId: string;
+};
+
+function validateLineItems(lineItems: RawLineItem[]): void {
   if (lineItems.length === 0) {
     throw new ConvexError({
       code: "VALIDATION_ERROR",
@@ -75,8 +86,7 @@ function validateDiscount(
     if (discount.value > subtotal) {
       throw new ConvexError({
         code: "VALIDATION_ERROR",
-        message:
-          "Fixed discount cannot exceed the subtotal.",
+        message: "Fixed discount cannot exceed the subtotal.",
       });
     }
   }
@@ -89,6 +99,76 @@ function validateTaxRate(taxRate: number): void {
       message: "Tax rate must be between 0 and 100.",
     });
   }
+}
+
+function buildLineItems(rawItems: RawLineItem[]) {
+  return rawItems.map((item) => ({
+    id: generateId(),
+    name: item.name.trim(),
+    description: item.description?.trim() || undefined,
+    quantity: item.quantity,
+    unitPrice: item.unitPrice,
+    taxable: item.taxable,
+    total: calculateLineItemTotal(item.quantity, item.unitPrice),
+  }));
+}
+
+async function resolveClientSnapshot(
+  ctx: { db: DatabaseReader },
+  clientId: Id<"clients">,
+  orgId: Id<"organizations">,
+) {
+  const client = await ctx.db.get(clientId);
+  if (!client) {
+    throw new ConvexError({
+      code: "NOT_FOUND",
+      message: "Client not found.",
+    });
+  }
+  if (client.orgId !== orgId) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "Client does not belong to this organization.",
+    });
+  }
+  if (client.archived) {
+    throw new ConvexError({
+      code: "VALIDATION_ERROR",
+      message: "Cannot assign an archived client to an invoice.",
+    });
+  }
+  return { name: client.name, email: client.email, phone: client.phone };
+}
+
+async function resolveExpenseSnapshots(
+  ctx: { db: DatabaseReader },
+  expenseIds: Id<"expenses">[],
+  orgId: Id<"organizations">,
+): Promise<ExpenseSnapshot[]> {
+  const snapshots: ExpenseSnapshot[] = [];
+  for (const expenseId of expenseIds) {
+    const expense = await ctx.db.get(expenseId);
+    if (!expense) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: `Expense ${expenseId} not found.`,
+      });
+    }
+    if (expense.orgId !== orgId) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: `Expense ${expenseId} does not belong to this organization.`,
+      });
+    }
+    snapshots.push({
+      id: expense._id as string,
+      description: expense.description,
+      amount: expense.amount,
+      category: expense.category,
+      orgId: expense.orgId as string,
+    });
+  }
+  return snapshots;
 }
 
 // ---------------------------------------------------------------------------
@@ -195,35 +275,13 @@ export const create = mutation({
   handler: async (ctx, args) => {
     await requireOrgMember(ctx, args.orgId);
 
-    // Validate client
-    const client = await ctx.db.get(args.clientId);
-    if (!client) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Client not found.",
-      });
-    }
-    if (client.orgId !== args.orgId) {
-      throw new ConvexError({
-        code: "FORBIDDEN",
-        message: "Client does not belong to this organization.",
-      });
-    }
-    if (client.archived) {
-      throw new ConvexError({
-        code: "VALIDATION_ERROR",
-        message: "Cannot create an invoice for an archived client.",
-      });
-    }
+    const clientSnapshot = await resolveClientSnapshot(ctx, args.clientId, args.orgId);
 
-    // Validate line items
     validateLineItems(args.lineItems);
 
-    // Validate tax rate
     const taxRate = args.taxRate ?? 0;
     validateTaxRate(taxRate);
 
-    // Validate due date
     if (args.dueDate !== undefined && args.dueDate <= 0) {
       throw new ConvexError({
         code: "VALIDATION_ERROR",
@@ -231,70 +289,24 @@ export const create = mutation({
       });
     }
 
-    // Calculate totals server-side
-    const { subtotal, tax, total } = calculateInvoiceTotal({
-      lineItems: args.lineItems,
-      discount: args.discount ?? null,
-      taxRate,
-    });
-
-    // Validate discount against computed subtotal
+    // Validate discount before calculating totals
     const discount = args.discount ?? null;
     if (discount) {
+      const subtotal = calculateSubtotal(args.lineItems);
       validateDiscount(discount, subtotal);
     }
 
-    // Build line items with server-generated IDs and computed totals
-    const lineItems = args.lineItems.map((item) => ({
-      id: generateId(),
-      name: item.name.trim(),
-      description: item.description?.trim() || undefined,
-      quantity: item.quantity,
-      unitPrice: item.unitPrice,
-      taxable: item.taxable,
-      total: calculateLineItemTotal(item.quantity, item.unitPrice),
-    }));
+    const { subtotal, tax, total } = calculateInvoiceTotal({
+      lineItems: args.lineItems,
+      discount,
+      taxRate,
+    });
 
-    // Build expense snapshots
-    const expenseSnapshots: Array<{
-      id: string;
-      description: string;
-      amount: number;
-      category?: string;
-      orgId: string;
-    }> = [];
+    const lineItems = buildLineItems(args.lineItems);
 
-    if (args.expenses && args.expenses.length > 0) {
-      for (const expenseId of args.expenses) {
-        const expense = await ctx.db.get(expenseId);
-        if (!expense) {
-          throw new ConvexError({
-            code: "NOT_FOUND",
-            message: `Expense ${expenseId} not found.`,
-          });
-        }
-        if (expense.orgId !== args.orgId) {
-          throw new ConvexError({
-            code: "FORBIDDEN",
-            message: `Expense ${expenseId} does not belong to this organization.`,
-          });
-        }
-        expenseSnapshots.push({
-          id: expense._id,
-          description: expense.description,
-          amount: expense.amount,
-          category: expense.category,
-          orgId: expense.orgId as string,
-        });
-      }
-    }
-
-    // Build client snapshot
-    const clientSnapshot = {
-      name: client.name,
-      email: client.email,
-      phone: client.phone,
-    };
+    const expenseSnapshots = args.expenses?.length
+      ? await resolveExpenseSnapshots(ctx, args.expenses, args.orgId)
+      : [];
 
     const now = Date.now();
 
@@ -356,7 +368,6 @@ export const update = mutation({
 
     await requireOrgMember(ctx, invoice.orgId);
 
-    // Only DRAFT invoices can be edited
     if (invoice.status !== InvoiceStatus.DRAFT) {
       throw new ConvexError({
         code: "VALIDATION_ERROR",
@@ -364,96 +375,31 @@ export const update = mutation({
       });
     }
 
-    const patch: Record<string, unknown> = {};
+    const patch: Partial<Doc<"invoices">> = {};
 
-    // Update client snapshot if clientId changed
     if (args.clientId !== undefined) {
-      const client = await ctx.db.get(args.clientId);
-      if (!client) {
-        throw new ConvexError({
-          code: "NOT_FOUND",
-          message: "Client not found.",
-        });
-      }
-      if (client.orgId !== invoice.orgId) {
-        throw new ConvexError({
-          code: "FORBIDDEN",
-          message: "Client does not belong to this organization.",
-        });
-      }
-      if (client.archived) {
-        throw new ConvexError({
-          code: "VALIDATION_ERROR",
-          message: "Cannot assign an archived client to an invoice.",
-        });
-      }
-      patch.clientSnapshot = {
-        name: client.name,
-        email: client.email,
-        phone: client.phone,
-      };
+      patch.clientSnapshot = await resolveClientSnapshot(ctx, args.clientId, invoice.orgId);
     }
 
-    // Update line items
     if (args.lineItems !== undefined) {
       validateLineItems(args.lineItems);
-      patch.lineItems = args.lineItems.map((item) => ({
-        id: generateId(),
-        name: item.name.trim(),
-        description: item.description?.trim() || undefined,
-        quantity: item.quantity,
-        unitPrice: item.unitPrice,
-        taxable: item.taxable,
-        total: calculateLineItemTotal(item.quantity, item.unitPrice),
-      }));
+      patch.lineItems = buildLineItems(args.lineItems);
     }
 
-    // Update expenses
     if (args.expenses !== undefined) {
-      const expenseSnapshots: Array<{
-        id: string;
-        description: string;
-        amount: number;
-        category?: string;
-        orgId: string;
-      }> = [];
-
-      for (const expenseId of args.expenses) {
-        const expense = await ctx.db.get(expenseId);
-        if (!expense) {
-          throw new ConvexError({
-            code: "NOT_FOUND",
-            message: `Expense ${expenseId} not found.`,
-          });
-        }
-        if (expense.orgId !== invoice.orgId) {
-          throw new ConvexError({
-            code: "FORBIDDEN",
-            message: `Expense ${expenseId} does not belong to this organization.`,
-          });
-        }
-        expenseSnapshots.push({
-          id: expense._id,
-          description: expense.description,
-          amount: expense.amount,
-          category: expense.category,
-          orgId: expense.orgId as string,
-        });
-      }
-      patch.expenses = expenseSnapshots;
+      patch.expenses = args.expenses.length
+        ? await resolveExpenseSnapshots(ctx, args.expenses, invoice.orgId)
+        : [];
     }
 
-    // Update discount
     if (args.discount !== undefined) {
       patch.discount = args.discount ?? undefined;
     }
 
-    // Update tax rate
     if (args.taxRate !== undefined) {
       validateTaxRate(args.taxRate);
     }
 
-    // Update due date
     if (args.dueDate !== undefined) {
       if (args.dueDate !== null && args.dueDate <= 0) {
         throw new ConvexError({
@@ -464,8 +410,8 @@ export const update = mutation({
       patch.dueDate = args.dueDate ?? undefined;
     }
 
-    // Recalculate totals using current or new values
-    const effectiveLineItems = (patch.lineItems as typeof invoice.lineItems) ?? invoice.lineItems;
+    // Resolve effective values for recalculation
+    const effectiveLineItems = patch.lineItems ?? invoice.lineItems;
     const effectiveDiscount =
       args.discount !== undefined
         ? (args.discount ?? null)
@@ -475,16 +421,17 @@ export const update = mutation({
         ? args.taxRate
         : (invoice.tax?.rate ?? 0);
 
+    // Validate discount before calculating totals
+    if (effectiveDiscount) {
+      const subtotal = calculateSubtotal(effectiveLineItems);
+      validateDiscount(effectiveDiscount, subtotal);
+    }
+
     const { subtotal, tax, total } = calculateInvoiceTotal({
       lineItems: effectiveLineItems,
       discount: effectiveDiscount,
       taxRate: effectiveTaxRate,
     });
-
-    // Validate discount against computed subtotal
-    if (effectiveDiscount) {
-      validateDiscount(effectiveDiscount, subtotal);
-    }
 
     patch.subtotal = subtotal;
     patch.tax = tax;
