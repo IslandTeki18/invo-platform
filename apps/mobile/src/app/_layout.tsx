@@ -6,8 +6,9 @@ import * as SecureStore from 'expo-secure-store';
 import React from 'react';
 import { useColorScheme } from 'react-native';
 
+import { Slot } from 'expo-router';
+
 import { AnimatedSplashOverlay } from '@/components/animated-icon/animated-icon';
-import AppTabs from '@/components/app-tabs/app-tabs';
 
 const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL!;
 
@@ -29,7 +30,7 @@ export default function RootLayout() {
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
-          <AppTabs />
+          <Slot />
         </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>

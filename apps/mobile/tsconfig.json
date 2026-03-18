@@ -8,6 +8,15 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "@repo/types": [
+        "../../packages/types/src"
+      ],
+      "@repo/utils": [
+        "../../packages/utils/src"
+      ],
+      "@repo/ui": [
+        "../../packages/ui/src"
       ]
     }
   },
