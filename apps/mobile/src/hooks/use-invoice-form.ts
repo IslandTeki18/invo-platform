@@ -78,7 +78,7 @@ type ExistingInvoice = {
     unitPrice: number;
     taxable: boolean;
   }>;
-  clientSnapshot: { name: string; email: string };
+  clientSnapshot?: { name: string; email: string; phone?: string };
   expenses: Array<{ id: string; description: string; amount: number }>;
   discount?: { type: "percentage" | "fixed"; value: number } | null;
   tax?: { rate: number };
@@ -223,8 +223,8 @@ function reducer(state: DraftFormState, action: Action): DraftFormState {
       return {
         ...state,
         clientId: null, // snapshot only; user must re-select to change
-        clientName: inv.clientSnapshot.name,
-        clientEmail: inv.clientSnapshot.email,
+        clientName: inv.clientSnapshot?.name ?? null,
+        clientEmail: inv.clientSnapshot?.email ?? null,
         lineItems: inv.lineItems.map((item) => ({
           localId: crypto.randomUUID(),
           name: item.name,
