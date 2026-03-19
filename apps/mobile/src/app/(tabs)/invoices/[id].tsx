@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, ActivityIndicator } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 
+import { InvoiceStatus } from '@repo/types';
 import { api } from '../../../../../../convex/_generated/api';
 import type { Id } from '../../../../../../convex/_generated/dataModel';
 import { useCurrentOrg } from '@/hooks/use-current-org';
@@ -22,7 +23,7 @@ export default function EditInvoiceScreen() {
 
   if (!currentOrg || invoice === undefined) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+      <View style={styles.centered}>
         <ActivityIndicator />
       </View>
     );
@@ -32,7 +33,7 @@ export default function EditInvoiceScreen() {
     return <EmptyState message="Invoice not found" />;
   }
 
-  if (invoice.status !== 'DRAFT') {
+  if (invoice.status !== InvoiceStatus.DRAFT) {
     return <InvoiceDetail invoice={invoice} onBack={router.back} />;
   }
 
@@ -49,3 +50,11 @@ function EditInvoiceForm({
   const form = useInvoiceForm({ orgId, existingInvoice: invoice });
   return <ComposerShell form={form} mode="edit" orgId={orgId} />;
 }
+
+const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+});

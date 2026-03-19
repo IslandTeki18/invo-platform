@@ -30,7 +30,6 @@ type InvoiceExpense = {
   description: string;
   amount: number;
   category?: string;
-  orgId: string;
 };
 
 type InvoiceDetailProps = {
@@ -66,7 +65,7 @@ export function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
   );
 
   return (
-    <ThemedView style={{ flex: 1 }}>
+    <ThemedView style={styles.root}>
       {/* Header */}
       <ThemedView
         style={[
@@ -246,6 +245,9 @@ export function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   header: {
     paddingHorizontal: Spacing.three,
     paddingBottom: Spacing.two,

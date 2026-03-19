@@ -261,7 +261,7 @@ export const getDashboardSummary = query({
       }
     }
 
-    const sorted = invoices.sort((a, b) => b.createdAt - a.createdAt);
+    const sorted = [...invoices].sort((a, b) => b.createdAt - a.createdAt);
     const recentInvoices = sorted.slice(0, 5).map((inv) => ({
       _id: inv._id,
       clientSnapshot: inv.clientSnapshot,

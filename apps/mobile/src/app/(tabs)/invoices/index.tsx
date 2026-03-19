@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   RefreshControl,
@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 
+import { InvoiceStatus } from '@repo/types';
 import { api } from '../../../../../../convex/_generated/api';
 import type { Id } from '../../../../../../convex/_generated/dataModel';
 import { BottomTabInset, Spacing } from '@/constants/theme';
@@ -19,14 +20,19 @@ import { ThemedText } from '@/components/primitives/themed-text';
 import { ThemedView } from '@/components/primitives/themed-view';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormButton } from '@/components/form';
-import { InvoiceRow } from '@/components/invoice/invoice-row';
-import type { InvoiceItem } from '@/components/invoice/invoice-row';
+import { InvoiceRow, type InvoiceItem } from '@/components/invoice/invoice-row';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const STATUS_ORDER = ['DRAFT', 'SENT', 'VIEWED', 'PAID', 'VOID'] as const;
+const STATUS_ORDER = [
+  InvoiceStatus.DRAFT,
+  InvoiceStatus.SENT,
+  InvoiceStatus.VIEWED,
+  InvoiceStatus.PAID,
+  InvoiceStatus.VOID,
+] as const;
 
 // ---------------------------------------------------------------------------
 // Section header
@@ -57,12 +63,19 @@ export default function InvoiceListScreen() {
   const theme = useTheme();
 
   const [refreshing, setRefreshing] = useState(false);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { currentOrg, isLoading: orgLoading } = useCurrentOrg();
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 500);
+    refreshTimer.current = setTimeout(() => setRefreshing(false), 500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    };
   }, []);
 
   const grouped = useQuery(
