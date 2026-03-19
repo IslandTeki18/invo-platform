@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 
 import { api } from '../../../../../../convex/_generated/api';
@@ -9,9 +9,11 @@ import { useCurrentOrg } from '@/hooks/use-current-org';
 import { useInvoiceForm } from '@/hooks/use-invoice-form';
 import { ComposerShell } from '@/components/invoice/composer-shell';
 import { EmptyState } from '@/components/ui/empty-state';
+import { InvoiceDetail } from '@/components/invoice/invoice-detail';
 
 export default function EditInvoiceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const router = useRouter();
   const { currentOrg } = useCurrentOrg();
   const invoice = useQuery(
     api.invoices.get,
@@ -31,7 +33,7 @@ export default function EditInvoiceScreen() {
   }
 
   if (invoice.status !== 'DRAFT') {
-    return <EmptyState message="Only draft invoices can be edited" />;
+    return <InvoiceDetail invoice={invoice} onBack={router.back} />;
   }
 
   return <EditInvoiceForm orgId={currentOrg._id} invoice={invoice} />;
