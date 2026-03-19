@@ -242,6 +242,38 @@ export const listByOrgGroupedByStatus = query({
   },
 });
 
+export const getDashboardSummary = query({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    await requireOrgMember(ctx, args.orgId);
+
+    const invoices = await ctx.db
+      .query("invoices")
+      .withIndex("by_orgId_status", (q) => q.eq("orgId", args.orgId))
+      .collect();
+
+    let unpaidCount = 0;
+    let unpaidTotal = 0;
+    for (const inv of invoices) {
+      if (inv.status === InvoiceStatus.SENT || inv.status === InvoiceStatus.VIEWED) {
+        unpaidCount++;
+        unpaidTotal += inv.total;
+      }
+    }
+
+    const sorted = invoices.sort((a, b) => b.createdAt - a.createdAt);
+    const recentInvoices = sorted.slice(0, 5).map((inv) => ({
+      _id: inv._id,
+      clientSnapshot: inv.clientSnapshot,
+      total: inv.total,
+      status: inv.status,
+      createdAt: inv.createdAt,
+    }));
+
+    return { unpaidCount, unpaidTotal, recentInvoices };
+  },
+});
+
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
