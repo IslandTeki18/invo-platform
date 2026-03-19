@@ -137,11 +137,11 @@ Valid transitions only: `draft→sent`, `sent→viewed`, `sent/viewed→paid`, `
 
 ## Current Implementation Status
 
-**Complete:** Monorepo structure, shared packages (types/utils with full enums, constants, DTOs, validators), Convex schema (all tables + indexes), auth integration (Clerk providers in all apps), user bootstrap flow, auth guards, organization CRUD with subdomain generation and tier enforcement, membership system with full permission matrix and continuity rules, onboarding state model and readiness helpers, client CRUD with archive/duplicate-email rules, item preset CRUD, expense CRUD with snapshot duplication, invoice math engine with full test coverage, invoice domain model and status machine.
+**Complete:** Monorepo structure, shared packages (types/utils with full enums, constants, DTOs, validators), Convex schema (all tables + indexes), auth integration (Clerk providers in all apps), user bootstrap flow, auth guards, organization CRUD with subdomain generation and tier enforcement, membership system with full permission matrix and continuity rules, onboarding state model and readiness helpers, client CRUD with archive/duplicate-email rules, item preset CRUD, expense CRUD with snapshot duplication, invoice math engine with full test coverage, invoice domain model and status machine, draft invoice backend (CRUD mutations and queries), mobile invoice composer UI (form hook, composer shell, all sections and pickers, create/edit/list screens), invoice list screen with status grouping.
 
-**In progress:** Draft invoice backend mutations and queries (section 13), Clerk dashboard config and sign-in screens, onboarding UI, org profile screen.
+**In progress:** Clerk dashboard config and sign-in screens, onboarding UI, org profile screen.
 
-**Not started:** Invoice composer UI, send flow, public viewer, payments, PDF generation, email/reminders, file uploads/storage quotas, invitation UI, subscription billing sync, downgrade grace, dashboard, admin panel, export, security hardening, tests beyond utils.
+**Not started:** Send flow, public viewer, payments, PDF generation, email/reminders, file uploads/storage quotas, invitation UI, subscription billing sync, downgrade grace, dashboard, admin panel, export, security hardening, tests beyond utils.
 
 Reference `docs/TASKS.md` for the full checklist with completion status.
 

@@ -629,75 +629,75 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 13. Draft invoice backend
 
 ### 13.1 Core mutations and queries
-- [ ] Add create draft invoice mutation
-- [ ] Add update draft invoice mutation
-- [ ] Add fetch invoice detail query
-- [ ] Add list invoices by org query
-- [ ] Add list invoices grouped by status query
-- [ ] Sort invoices newest first
+- [x] Add create draft invoice mutation
+- [x] Add update draft invoice mutation
+- [x] Add fetch invoice detail query
+- [x] Add list invoices by org query
+- [x] Add list invoices grouped by status query
+- [x] Sort invoices newest first
 
 ### 13.2 Draft restrictions
-- [ ] Allow Member to create draft invoices
-- [ ] Allow Member to edit permitted draft fields
-- [ ] Block Member from sending invoices
+- [x] Allow Member to create draft invoices
+- [x] Allow Member to edit permitted draft fields
+- [x] Block Member from sending invoices
 
 ### 13.3 Integrity
-- [ ] Recalculate totals server-side on save
-- [ ] Validate client snapshot exists on save
-- [ ] Validate line items on save
-- [ ] Validate attached expenses on save
+- [x] Recalculate totals server-side on save
+- [x] Validate client snapshot exists on save
+- [x] Validate line items on save
+- [x] Validate attached expenses on save
 
 ---
 
 ## 14. Mobile invoice composer UI
 
 ### 14.1 Screen structure
-- [ ] Build invoice draft screen shell
-- [ ] Build invoice draft header
-- [ ] Build client selection section
-- [ ] Build line items section
-- [ ] Build expenses section
-- [ ] Build discount section
-- [ ] Build totals section
-- [ ] Build actions footer
+- [x] Build invoice draft screen shell
+- [x] Build invoice draft header
+- [x] Build client selection section
+- [x] Build line items section
+- [x] Build expenses section
+- [x] Build discount section
+- [x] Build totals section
+- [x] Build actions footer
 
 ### 14.2 Client flow
-- [ ] Add client picker
-- [ ] Add quick-create client option
-- [ ] Handle archived client exclusion
+- [x] Add client picker
+- [x] Add quick-create client option
+- [x] Handle archived client exclusion
 
 ### 14.3 Line item flow
-- [ ] Add new line-item action
-- [ ] Add edit line-item action
-- [ ] Add remove line-item action
-- [ ] Add quantity input with decimal support
-- [ ] Add taxable toggle
+- [x] Add new line-item action
+- [x] Add edit line-item action
+- [x] Add remove line-item action
+- [x] Add quantity input with decimal support
+- [x] Add taxable toggle
 - [ ] Add optional image placeholder support if included in V1 line items
-- [ ] Add line-item preview totals
+- [x] Add line-item preview totals
 
 ### 14.4 Preset flow
-- [ ] Add insert-from-preset action
-- [ ] Map preset into draft line-item fields
+- [x] Add insert-from-preset action
+- [x] Map preset into draft line-item fields
 
 ### 14.5 Expense flow
-- [ ] Add attach expense action
-- [ ] Add remove attached expense action
-- [ ] Show duplicated expense cost in invoice summary
+- [x] Add attach expense action
+- [x] Add remove attached expense action
+- [x] Show duplicated expense cost in invoice summary
 
 ### 14.6 Save behavior
-- [ ] Save draft changes
-- [ ] Restore draft on reload
-- [ ] Show validation errors clearly
+- [x] Save draft changes
+- [x] Restore draft on reload
+- [x] Show validation errors clearly
 
 ---
 
 ## 15. Invoice list and dashboard basics
 
 ### 15.1 Invoice list
-- [ ] Build invoice list screen
-- [ ] Group by Draft, Sent, Viewed, Paid, Void
-- [ ] Sort each group newest first
-- [ ] Add empty states per group
+- [x] Build invoice list screen
+- [x] Group by Draft, Sent, Viewed, Paid, Void
+- [x] Sort each group newest first
+- [x] Add empty states per group
 
 ### 15.2 Dashboard
 - [ ] Add total unpaid amount query
@@ -1258,8 +1258,8 @@ Use this as the shortest path to a working product.
 - [ ] Clients
 - [ ] Item presets
 - [ ] Expenses
-- [ ] Draft invoice backend
-- [ ] Draft invoice mobile UI
+- [x] Draft invoice backend
+- [x] Draft invoice mobile UI
 - [ ] Invoice send flow
 - [ ] Public invoice viewer
 - [ ] Stripe Checkout payment flow
