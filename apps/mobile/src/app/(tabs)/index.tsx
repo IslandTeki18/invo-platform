@@ -1,98 +1,264 @@
-import * as Device from 'expo-device';
-import { Platform, StyleSheet } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import React, { useState, useCallback } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRouter } from 'expo-router';
+import { useQuery, useMutation } from 'convex/react';
 
-import { AnimatedIcon } from '@/components/animated-icon/animated-icon';
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
+import { formatMoney } from '@repo/utils';
+import { BottomTabInset, Spacing } from '@/constants/theme';
+import { useCurrentOrg } from '@/hooks/use-current-org';
 import { ThemedText } from '@/components/primitives/themed-text';
 import { ThemedView } from '@/components/primitives/themed-view';
-import { HintRow } from '@/components/ui/hint-row';
-import { WebBadge } from '@/components/ui/web-badge';
-import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
+import { EmptyState } from '@/components/ui/empty-state';
+import { FormButton, FormField } from '@/components/form';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
+import { InvoiceRow, type InvoiceItem } from '@/components/invoice/invoice-row';
 
-function getDevMenuHint() {
-  if (Platform.OS === 'web') {
-    return <ThemedText type="small">use browser devtools</ThemedText>;
-  }
-  if (Device.isDevice) {
+// ---------------------------------------------------------------------------
+// Screen
+// ---------------------------------------------------------------------------
+
+export default function DashboardScreen() {
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  // Org context
+  const { currentOrg, isLoading: orgLoading } = useCurrentOrg();
+
+  // Dashboard data
+  const summary = useQuery(
+    api.invoices.getDashboardSummary,
+    currentOrg ? { orgId: currentOrg._id as Id<'organizations'> } : 'skip',
+  );
+
+  // Client quick-create sheet state
+  const [showClientSheet, setShowClientSheet] = useState(false);
+  const [clientName, setClientName] = useState('');
+  const [clientEmail, setClientEmail] = useState('');
+  const [clientError, setClientError] = useState('');
+  const [clientSaving, setClientSaving] = useState(false);
+  const createClient = useMutation(api.clients.create);
+
+  const closeSheet = useCallback(() => {
+    setShowClientSheet(false);
+    setClientName('');
+    setClientEmail('');
+    setClientError('');
+  }, []);
+
+  const handleCreateClient = useCallback(async () => {
+    if (!clientName.trim()) {
+      setClientError('Name is required.');
+      return;
+    }
+    if (!clientEmail.trim()) {
+      setClientError('Email is required.');
+      return;
+    }
+    if (!currentOrg) return;
+
+    setClientError('');
+    setClientSaving(true);
+    try {
+      await createClient({
+        orgId: currentOrg._id as Id<'organizations'>,
+        name: clientName.trim(),
+        email: clientEmail.trim(),
+      });
+      closeSheet();
+    } catch (err) {
+      setClientError(err instanceof Error ? err.message : 'Failed to create client.');
+    } finally {
+      setClientSaving(false);
+    }
+  }, [clientName, clientEmail, currentOrg, createClient, closeSheet]);
+
+  // ---------------------------------------------------------------------------
+  // Loading state
+  // ---------------------------------------------------------------------------
+
+  if (orgLoading || (currentOrg && summary === undefined)) {
     return (
-      <ThemedText type="small">
-        shake device or press <ThemedText type="code">m</ThemedText> in terminal
-      </ThemedText>
+      <ThemedView style={styles.centered}>
+        <ActivityIndicator />
+      </ThemedView>
     );
   }
-  const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-  return (
-    <ThemedText type="small">
-      press <ThemedText type="code">{shortcut}</ThemedText>
-    </ThemedText>
-  );
-}
 
-export default function HomeScreen() {
+  // ---------------------------------------------------------------------------
+  // No org state
+  // ---------------------------------------------------------------------------
+
+  if (!currentOrg) {
+    return (
+      <ThemedView style={styles.centered}>
+        <EmptyState message="Select an organization" />
+      </ThemedView>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Dashboard
+  // ---------------------------------------------------------------------------
+
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <ThemedView style={styles.heroSection}>
-          <AnimatedIcon />
-          <ThemedText type="title" style={styles.title}>
-            Welcome to&nbsp;Expo
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: BottomTabInset + Spacing.three },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View
+          style={{
+            paddingTop: insets.top + Spacing.three,
+            paddingHorizontal: Spacing.three,
+            paddingBottom: Spacing.three,
+          }}
+        >
+          <ThemedText type="subtitle">Dashboard</ThemedText>
+        </View>
+
+        {/* Metric cards */}
+        <View style={styles.metricsRow}>
+          <ThemedView type="backgroundElement" style={styles.metricCard}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Unpaid Amount
+            </ThemedText>
+            <ThemedText type="subtitle">
+              {formatMoney(summary?.unpaidTotal ?? 0)}
+            </ThemedText>
+          </ThemedView>
+
+          <ThemedView type="backgroundElement" style={styles.metricCard}>
+            <ThemedText type="small" themeColor="textSecondary">
+              Unpaid Invoices
+            </ThemedText>
+            <ThemedText type="subtitle">
+              {String(summary?.unpaidCount ?? 0)}
+            </ThemedText>
+          </ThemedView>
+        </View>
+
+        {/* Recent invoices */}
+        <View style={styles.section}>
+          <ThemedText
+            type="small"
+            themeColor="textSecondary"
+            style={styles.sectionLabel}
+          >
+            RECENT INVOICES
           </ThemedText>
-        </ThemedView>
 
-        <ThemedText type="code" style={styles.code}>
-          get started
-        </ThemedText>
+          {summary && summary.recentInvoices.length > 0 ? (
+            summary.recentInvoices.map((item: InvoiceItem) => (
+              <InvoiceRow
+                key={item._id}
+                invoice={item}
+                onPress={() => router.push(`invoices/${item._id}`)}
+              />
+            ))
+          ) : (
+            <ThemedText themeColor="textSecondary">No invoices yet</ThemedText>
+          )}
+        </View>
 
-        <ThemedView type="backgroundElement" style={styles.stepContainer}>
-          <HintRow
-            title="Try editing"
-            hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
+        {/* Quick actions */}
+        <View style={styles.section}>
+          <ThemedText
+            type="small"
+            themeColor="textSecondary"
+            style={styles.sectionLabel}
+          >
+            QUICK ACTIONS
+          </ThemedText>
+
+          <View style={styles.actionsStack}>
+            <FormButton
+              label="New Invoice"
+              variant="primary"
+              onPress={() => router.push('invoices/new')}
+            />
+            <FormButton
+              label="Add Client"
+              variant="secondary"
+              onPress={() => setShowClientSheet(true)}
+            />
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Client quick-create bottom sheet */}
+      <BottomSheet
+        visible={showClientSheet}
+        onClose={closeSheet}
+        title="Add Client"
+      >
+        <View style={{ paddingHorizontal: Spacing.three, gap: Spacing.two }}>
+          <FormField
+            label="Name"
+            value={clientName}
+            onChangeText={setClientName}
           />
-          <HintRow title="Dev tools" hint={getDevMenuHint()} />
-          <HintRow
-            title="Fresh start"
-            hint={<ThemedText type="code">npm run reset-project</ThemedText>}
+          <FormField
+            label="Email"
+            value={clientEmail}
+            onChangeText={setClientEmail}
+            keyboardType="email-address"
           />
-        </ThemedView>
-
-        {Platform.OS === 'web' && <WebBadge />}
-      </SafeAreaView>
+          {clientError ? (
+            <ThemedText themeColor="destructive">{clientError}</ThemedText>
+          ) : null}
+          <FormButton
+            label="Create Client"
+            onPress={handleCreateClient}
+            loading={clientSaving}
+          />
+        </View>
+      </BottomSheet>
     </ThemedView>
   );
 }
 
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centered: {
+    flex: 1,
+    alignItems: 'center',
     justifyContent: 'center',
+  },
+  scrollContent: {
+    gap: Spacing.three,
+  },
+  metricsRow: {
     flexDirection: 'row',
-  },
-  safeArea: {
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    alignItems: 'center',
-    gap: Spacing.three,
-    paddingBottom: BottomTabInset + Spacing.three,
-    maxWidth: MaxContentWidth,
-  },
-  heroSection: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    flex: 1,
-    paddingHorizontal: Spacing.four,
-    gap: Spacing.four,
-  },
-  title: {
-    textAlign: 'center',
-  },
-  code: {
-    textTransform: 'uppercase',
-  },
-  stepContainer: {
-    gap: Spacing.three,
-    alignSelf: 'stretch',
     paddingHorizontal: Spacing.three,
-    paddingVertical: Spacing.four,
-    borderRadius: Spacing.four,
+    gap: Spacing.two,
+  },
+  metricCard: {
+    flex: 1,
+    borderRadius: Spacing.two,
+    padding: Spacing.three,
+    gap: Spacing.one,
+  },
+  section: {
+    paddingHorizontal: Spacing.three,
+    gap: Spacing.two,
+  },
+  sectionLabel: {
+    letterSpacing: 0.8,
+  },
+  actionsStack: {
+    gap: Spacing.two,
   },
 });
