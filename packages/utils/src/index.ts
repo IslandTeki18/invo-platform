@@ -8,6 +8,7 @@ export * from "./money";
 export * from "./invoice-math";
 export * from "./permissions";
 export * from "./token";
+export * from "./token-web";
 export * from "./url-builders";
 export * from "./file-paths";
 export * from "./slug";
