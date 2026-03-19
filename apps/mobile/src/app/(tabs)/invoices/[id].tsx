@@ -48,7 +48,7 @@ function EditInvoiceForm({
   invoice: NonNullable<ReturnType<typeof useQuery<typeof api.invoices.get>>>;
 }) {
   const form = useInvoiceForm({ orgId, existingInvoice: invoice });
-  return <ComposerShell form={form} mode="edit" orgId={orgId} />;
+  return <ComposerShell form={form} mode="edit" orgId={orgId} invoiceId={invoice._id} />;
 }
 
 const styles = StyleSheet.create({

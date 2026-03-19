@@ -11,9 +11,11 @@ export type ComposerFooterProps = {
   onSave: () => void;
   isSaving: boolean;
   errors: Record<string, string>;
+  onSend?: () => void;
+  isSendDisabled?: boolean;
 };
 
-export function ComposerFooter({ onSave, isSaving, errors }: ComposerFooterProps) {
+export function ComposerFooter({ onSave, isSaving, errors, onSend, isSendDisabled }: ComposerFooterProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
@@ -40,13 +42,35 @@ export function ComposerFooter({ onSave, isSaving, errors }: ComposerFooterProps
         </ThemedText>
       ) : null}
 
-      <FormButton
-        label="Save Draft"
-        onPress={onSave}
-        variant="primary"
-        loading={isSaving}
-        disabled={isSaving}
-      />
+      {onSend ? (
+        <View style={styles.buttonRow}>
+          <View style={styles.buttonFlex}>
+            <FormButton
+              label="Save Draft"
+              onPress={onSave}
+              variant="secondary"
+              loading={isSaving}
+              disabled={isSaving}
+            />
+          </View>
+          <View style={styles.buttonFlex}>
+            <FormButton
+              label="Send Invoice"
+              onPress={onSend}
+              variant="primary"
+              disabled={isSendDisabled || isSaving}
+            />
+          </View>
+        </View>
+      ) : (
+        <FormButton
+          label="Save Draft"
+          onPress={onSave}
+          variant="primary"
+          loading={isSaving}
+          disabled={isSaving}
+        />
+      )}
     </ThemedView>
   );
 }
@@ -60,5 +84,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     textAlign: 'center',
+  },
+  buttonRow: {
+    flexDirection: 'row',
+    gap: Spacing.two,
+  },
+  buttonFlex: {
+    flex: 1,
   },
 });

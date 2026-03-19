@@ -1,6 +1,10 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useMutation } from 'convex/react';
+
+import { api } from '../../../../../convex/_generated/api';
+import type { Id } from '../../../../../convex/_generated/dataModel';
 
 import { Spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/primitives/themed-text';
@@ -18,19 +22,35 @@ import { DiscountSection } from '@/components/invoice/discount-section';
 import { TaxSection } from '@/components/invoice/tax-section';
 import { DueDateSection } from '@/components/invoice/due-date-section';
 import { TotalsSection } from '@/components/invoice/totals-section';
+import { SendConfirmation } from '@/components/invoice/send-confirmation';
 
 export type ComposerShellProps = {
   form: UseInvoiceFormReturn;
   mode: 'create' | 'edit';
   orgId: string;
+  invoiceId?: string;
 };
 
-export function ComposerShell({ form, mode, orgId }: ComposerShellProps) {
+export function ComposerShell({ form, mode, orgId, invoiceId }: ComposerShellProps) {
   const router = useRouter();
 
   const [clientPickerVisible, setClientPickerVisible] = useState(false);
   const [presetPickerVisible, setPresetPickerVisible] = useState(false);
   const [expensePickerVisible, setExpensePickerVisible] = useState(false);
+  const [sendModalVisible, setSendModalVisible] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const sendInvoice = useMutation(api.invoices.send);
+
+  const handleSend = useCallback(async () => {
+    if (!invoiceId) return;
+    setIsSending(true);
+    try {
+      await sendInvoice({ invoiceId: invoiceId as Id<'invoices'> });
+      router.back();
+    } catch {
+      setIsSending(false);
+    }
+  }, [invoiceId, sendInvoice, router]);
 
   const title = mode === 'create' ? 'New Invoice' : 'Edit Draft';
 
@@ -136,6 +156,8 @@ export function ComposerShell({ form, mode, orgId }: ComposerShellProps) {
         onSave={form.save}
         isSaving={form.state.isSaving}
         errors={form.state.errors}
+        onSend={mode === 'edit' && invoiceId ? () => setSendModalVisible(true) : undefined}
+        isSendDisabled={isSending}
       />
 
       {/* Pickers */}
@@ -159,6 +181,15 @@ export function ComposerShell({ form, mode, orgId }: ComposerShellProps) {
         orgId={orgId}
         selectedIds={form.state.expenseIds}
         onConfirm={form.setExpenses}
+      />
+
+      <SendConfirmation
+        visible={sendModalVisible}
+        onClose={() => setSendModalVisible(false)}
+        onConfirm={handleSend}
+        isSending={isSending}
+        clientName={form.state.clientName ?? ''}
+        total={form.totals.total}
       />
     </View>
   );
