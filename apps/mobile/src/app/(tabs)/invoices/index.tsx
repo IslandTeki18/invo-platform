@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  RefreshControl,
   SectionList,
   StyleSheet,
   View,
@@ -55,7 +56,14 @@ export default function InvoiceListScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const { currentOrg, isLoading: orgLoading } = useCurrentOrg();
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    setTimeout(() => setRefreshing(false), 500);
+  }, []);
 
   const grouped = useQuery(
     api.invoices.listByOrgGroupedByStatus,
@@ -125,6 +133,7 @@ export default function InvoiceListScreen() {
             { paddingBottom: BottomTabInset + Spacing.three },
           ]}
           stickySectionHeadersEnabled
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         />
       )}
     </ThemedView>
