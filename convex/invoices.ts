@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { DatabaseReader } from "./_generated/server";
 import { requireOrgMember } from "./lib/auth";
@@ -473,5 +473,18 @@ export const update = mutation({
     patch.updatedAt = Date.now();
 
     await ctx.db.patch(args.invoiceId, patch);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Internal queries (for use by actions)
+// ---------------------------------------------------------------------------
+
+export const getInternal = internalQuery({
+  args: { invoiceId: v.id("invoices") },
+  handler: async (ctx, args) => {
+    const invoice = await ctx.db.get(args.invoiceId);
+    if (!invoice) throw new ConvexError({ code: "NOT_FOUND", message: "Invoice not found." });
+    return invoice;
   },
 });

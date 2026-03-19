@@ -1,8 +1,9 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireAuth, requireOrgMember } from "./lib/auth";
+import { OrganizationRole } from "@repo/types";
 
 // ---------------------------------------------------------------------------
 // Private helpers
@@ -205,5 +206,24 @@ export const leave = mutation({
     }
 
     await ctx.db.delete(membership._id);
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Internal queries (for use by actions)
+// ---------------------------------------------------------------------------
+
+export const getOrgOwner = internalQuery({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const memberships = await ctx.db
+      .query("memberships")
+      .withIndex("by_orgId", (q) => q.eq("orgId", args.orgId))
+      .collect();
+    const owner = memberships.find((m) => m.role === OrganizationRole.OWNER);
+    if (!owner) throw new ConvexError({ code: "NOT_FOUND", message: "Org owner not found." });
+    const user = await ctx.db.get(owner.userId);
+    if (!user) throw new ConvexError({ code: "NOT_FOUND", message: "Owner user not found." });
+    return { email: user.email, userId: user._id };
   },
 });

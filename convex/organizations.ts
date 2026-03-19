@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalQuery, mutation, query } from "./_generated/server";
 import { requireAuth, requireOrgMember } from "./lib/auth";
 
 // ---------------------------------------------------------------------------
@@ -250,5 +250,18 @@ export const get = query({
       ...org,
       role: membership.role,
     };
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Internal queries (for use by actions)
+// ---------------------------------------------------------------------------
+
+export const getInternal = internalQuery({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const org = await ctx.db.get(args.orgId);
+    if (!org) throw new ConvexError({ code: "NOT_FOUND", message: "Organization not found." });
+    return org;
   },
 });
