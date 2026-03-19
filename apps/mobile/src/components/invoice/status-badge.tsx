@@ -1,17 +1,10 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { InvoiceStatus } from '@repo/types';
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/primitives/themed-text';
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const STATUS_ORDER = ['DRAFT', 'SENT', 'VIEWED', 'PAID', 'VOID'] as const;
-
-type InvoiceStatus = (typeof STATUS_ORDER)[number];
 
 // ---------------------------------------------------------------------------
 // Component
@@ -21,16 +14,16 @@ export function StatusBadge({ status }: { status: string }) {
   const theme = useTheme();
 
   const badgeColor = useMemo(() => {
-    switch (status as InvoiceStatus) {
-      case 'DRAFT':
+    switch (status) {
+      case InvoiceStatus.DRAFT:
         return theme.textSecondary;
-      case 'SENT':
+      case InvoiceStatus.SENT:
         return theme.accent;
-      case 'VIEWED':
+      case InvoiceStatus.VIEWED:
         return theme.accent;
-      case 'PAID':
+      case InvoiceStatus.PAID:
         return '#22C55E';
-      case 'VOID':
+      case InvoiceStatus.VOID:
         return theme.destructive;
       default:
         return theme.textSecondary;

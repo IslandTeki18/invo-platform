@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import type { Discount } from '@repo/types';
 import { formatMoney, applyDiscount } from '@repo/utils';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -14,17 +15,17 @@ import { TotalsSection } from '@/components/invoice/totals-section';
 // Types
 // ---------------------------------------------------------------------------
 
-type LineItem = {
+type InvoiceLineItem = {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
   quantity: number;
   unitPrice: number;
   taxable: boolean;
   total: number;
 };
 
-type Expense = {
+type InvoiceExpense = {
   id: string;
   description: string;
   amount: number;
@@ -32,19 +33,15 @@ type Expense = {
   orgId: string;
 };
 
-type Discount =
-  | { type: 'percentage' | 'fixed'; value: number }
-  | undefined;
-
 type InvoiceDetailProps = {
   invoice: {
     _id: string;
     status: string;
-    clientSnapshot?: { name: string; email: string; phone?: string };
-    lineItems: LineItem[];
-    expenses: Expense[];
+    clientSnapshot?: { name: string; email: string; phone?: string | null };
+    lineItems: InvoiceLineItem[];
+    expenses: InvoiceExpense[];
     subtotal: number;
-    discount?: Discount;
+    discount?: Discount | null;
     tax?: { rate: number; amount: number; taxableSubtotal: number };
     total: number;
     dueDate?: number;
