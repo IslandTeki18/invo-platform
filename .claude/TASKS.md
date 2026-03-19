@@ -700,13 +700,13 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Add empty states per group
 
 ### 15.2 Dashboard
-- [ ] Add total unpaid amount query
-- [ ] Add unpaid invoice count query
-- [ ] Add recent invoices query limited to 5
-- [ ] Add quick actions:
-  - [ ] create invoice
-  - [ ] add client
-- [ ] Build dashboard UI cards
+- [x] Add total unpaid amount query
+- [x] Add unpaid invoice count query
+- [x] Add recent invoices query limited to 5
+- [x] Add quick actions:
+  - [x] create invoice
+  - [x] add client
+- [x] Build dashboard UI cards
 
 ---
 
