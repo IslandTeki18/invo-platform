@@ -91,6 +91,7 @@ export default defineSchema({
 
   invoices: defineTable({
     orgId: v.id("organizations"),
+    clientId: v.optional(v.id("clients")),
     clientSnapshot: v.optional(clientSnapshotValidator),
     lineItems: v.array(lineItemValidator),
     expenses: v.array(expenseSnapshotValidator),

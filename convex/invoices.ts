@@ -344,6 +344,7 @@ export const create = mutation({
 
     const invoiceId = await ctx.db.insert("invoices", {
       orgId: args.orgId,
+      clientId: args.clientId,
       clientSnapshot,
       lineItems,
       expenses: expenseSnapshots,
@@ -411,6 +412,7 @@ export const update = mutation({
 
     if (args.clientId !== undefined) {
       patch.clientSnapshot = await resolveClientSnapshot(ctx, args.clientId, invoice.orgId);
+      patch.clientId = args.clientId;
     }
 
     if (args.lineItems !== undefined) {
