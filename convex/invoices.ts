@@ -1,5 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { internalQuery, mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { DatabaseReader } from "./_generated/server";
 import { requireOrgMember } from "./lib/auth";
@@ -7,8 +8,12 @@ import {
   calculateInvoiceTotal,
   calculateLineItemTotal,
   calculateSubtotal,
+  canSendInvoice,
+  generateAccessTokenWeb,
+  isReadyToSendInvoice,
+  isValidStatusTransition,
 } from "@repo/utils";
-import { InvoiceStatus } from "@repo/types";
+import { InvoiceStatus, LogEventType } from "@repo/types";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -473,6 +478,102 @@ export const update = mutation({
     patch.updatedAt = Date.now();
 
     await ctx.db.patch(args.invoiceId, patch);
+  },
+});
+
+export const send = mutation({
+  args: { invoiceId: v.id("invoices") },
+  handler: async (ctx, args) => {
+    // 1. Fetch invoice
+    const invoice = await ctx.db.get(args.invoiceId);
+    if (!invoice) throw new ConvexError({ code: "NOT_FOUND", message: "Invoice not found." });
+
+    // 2. Auth + permission
+    const { user, membership } = await requireOrgMember(ctx, invoice.orgId);
+    if (!canSendInvoice(membership.role)) {
+      throw new ConvexError({ code: "FORBIDDEN", message: "You do not have permission to send invoices." });
+    }
+
+    // 3. Status check
+    if (!isValidStatusTransition(invoice.status as InvoiceStatus, InvoiceStatus.SENT)) {
+      throw new ConvexError({ code: "VALIDATION_ERROR", message: "Only draft invoices can be sent." });
+    }
+
+    // 4. Org readiness
+    const org = await ctx.db.get(invoice.orgId);
+    if (!org) throw new ConvexError({ code: "NOT_FOUND", message: "Organization not found." });
+
+    const stripeAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_orgId", (q) => q.eq("orgId", invoice.orgId))
+      .unique();
+
+    const orgReadiness = {
+      name: org.name,
+      businessAddress: org.businessAddress ?? null,
+      stripeAccountId: stripeAccount?.stripeAccountId ?? null,
+      chargesEnabled: stripeAccount?.chargesEnabled ?? false,
+    };
+    if (!isReadyToSendInvoice(orgReadiness)) {
+      throw new ConvexError({
+        code: "VALIDATION_ERROR",
+        message: "Organization is not ready to send invoices. Ensure name, business address, and Stripe are configured.",
+      });
+    }
+
+    // 5. Re-snapshot client (if clientId available)
+    let clientSnapshot = invoice.clientSnapshot;
+    if (invoice.clientId) {
+      clientSnapshot = await resolveClientSnapshot(ctx, invoice.clientId, invoice.orgId);
+    }
+    if (!clientSnapshot) {
+      throw new ConvexError({ code: "VALIDATION_ERROR", message: "Invoice must have a client." });
+    }
+
+    // 6. Recalculate totals server-side
+    const { subtotal, tax, total } = calculateInvoiceTotal({
+      lineItems: invoice.lineItems,
+      discount: invoice.discount ?? null,
+      taxRate: invoice.tax?.rate ?? 0,
+    });
+
+    if (total <= 0) {
+      throw new ConvexError({ code: "VALIDATION_ERROR", message: "Invoice total must be greater than zero." });
+    }
+
+    // 7. Generate access token
+    const accessToken = generateAccessTokenWeb();
+
+    // 8. Patch invoice
+    const now = Date.now();
+    await ctx.db.patch(args.invoiceId, {
+      status: InvoiceStatus.SENT,
+      clientSnapshot,
+      accessToken,
+      sentAt: now,
+      subtotal,
+      tax,
+      total,
+      updatedAt: now,
+    });
+
+    // 9. Log
+    await ctx.db.insert("logs", {
+      eventType: LogEventType.INVOICE_SENT,
+      actorId: user._id as string,
+      orgId: invoice.orgId as string,
+      entityType: "invoice",
+      entityId: args.invoiceId as string,
+      createdAt: now,
+    });
+
+    // 10. Schedule async actions
+    // NOTE: These references (internal.actions.pdf.generate and internal.actions.email.sendInvoiceEmail)
+    // will not exist until Tasks 6 and 7 are implemented. Typecheck errors are expected until then.
+    await ctx.scheduler.runAfter(0, internal.actions.pdf.generate, { invoiceId: args.invoiceId });
+    await ctx.scheduler.runAfter(0, internal.actions.email.sendInvoiceEmail, { invoiceId: args.invoiceId });
+
+    return { invoiceId: args.invoiceId };
   },
 });
 
