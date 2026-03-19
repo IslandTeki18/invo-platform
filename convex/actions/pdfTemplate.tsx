@@ -6,7 +6,7 @@ import {
   Text,
   StyleSheet,
 } from "@react-pdf/renderer";
-import { formatMoney } from "@repo/utils";
+import { formatMoney, applyDiscount } from "@repo/utils";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -239,14 +239,11 @@ function formatDiscountLabel(discount: { type: "percentage" | "fixed"; value: nu
   return `Discount (${formatMoney(discount.value)})`;
 }
 
-function computeDiscountAmount(
+function discountAmount(
   subtotal: number,
   discount: { type: "percentage" | "fixed"; value: number },
 ): number {
-  if (discount.type === "percentage") {
-    return Math.round(subtotal * (discount.value / 100));
-  }
-  return discount.value;
+  return subtotal - applyDiscount(subtotal, discount);
 }
 
 // ---------------------------------------------------------------------------
@@ -351,7 +348,7 @@ export function InvoicePdf({ invoice, org }: InvoicePdfProps) {
                 {formatDiscountLabel(invoice.discount)}
               </Text>
               <Text style={styles.totalValue}>
-                -{formatMoney(computeDiscountAmount(invoice.subtotal, invoice.discount))}
+                -{formatMoney(discountAmount(invoice.subtotal, invoice.discount))}
               </Text>
             </View>
           )}

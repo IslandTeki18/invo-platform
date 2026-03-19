@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from 'convex/react';
 
@@ -47,7 +47,9 @@ export function ComposerShell({ form, mode, orgId, invoiceId }: ComposerShellPro
     try {
       await sendInvoice({ invoiceId: invoiceId as Id<'invoices'> });
       router.back();
-    } catch {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to send invoice.';
+      Alert.alert('Send Failed', message);
       setIsSending(false);
     }
   }, [invoiceId, sendInvoice, router]);

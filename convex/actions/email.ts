@@ -25,6 +25,7 @@ export const sendInvoiceEmail = internalAction({
     });
 
     if (!invoice.clientSnapshot?.email || !invoice.accessToken) {
+      console.warn(`Skipping email for invoice ${args.invoiceId}: missing client email or access token`);
       return;
     }
 
