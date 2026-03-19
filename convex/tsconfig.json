@@ -9,11 +9,12 @@
     "noEmit": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "jsx": "react-jsx",
     "paths": {
       "@repo/types": ["../packages/types/src"],
       "@repo/utils": ["../packages/utils/src"]
     }
   },
-  "include": ["./**/*.ts"],
+  "include": ["./**/*.ts", "./**/*.tsx"],
   "exclude": ["../_generated"]
 }

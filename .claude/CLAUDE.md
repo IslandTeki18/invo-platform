@@ -137,11 +137,11 @@ Valid transitions only: `draft→sent`, `sent→viewed`, `sent/viewed→paid`, `
 
 ## Current Implementation Status
 
-**Complete:** Monorepo structure, shared packages (types/utils with full enums, constants, DTOs, validators), Convex schema (all tables + indexes), auth integration (Clerk providers in all apps), user bootstrap flow, auth guards, organization CRUD with subdomain generation and tier enforcement, membership system with full permission matrix and continuity rules, onboarding state model and readiness helpers, client CRUD with archive/duplicate-email rules, item preset CRUD, expense CRUD with snapshot duplication, invoice math engine with full test coverage, invoice domain model and status machine, draft invoice backend (CRUD mutations and queries), mobile invoice composer UI (form hook, composer shell, all sections and pickers, create/edit/list screens), invoice list screen with status grouping and pull-to-refresh, dashboard with unpaid metrics and quick actions, invoice detail view for all statuses.
+**Complete:** Monorepo structure, shared packages (types/utils with full enums, constants, DTOs, validators), Convex schema (all tables + indexes), auth integration (Clerk providers in all apps), user bootstrap flow, auth guards, organization CRUD with subdomain generation and tier enforcement, membership system with full permission matrix and continuity rules, onboarding state model and readiness helpers, client CRUD with archive/duplicate-email rules, item preset CRUD, expense CRUD with snapshot duplication, invoice math engine with full test coverage, invoice domain model and status machine, draft invoice backend (CRUD mutations and queries), mobile invoice composer UI (form hook, composer shell, all sections and pickers, create/edit/list screens), invoice list screen with status grouping and pull-to-refresh, dashboard with unpaid metrics and quick actions, invoice detail view for all statuses, invoice send flow with validation, client re-snapshot, token generation, PDF generation via @react-pdf/renderer, email delivery via Resend with rate limiting, and mobile send UI with confirmation modal.
 
 **In progress:** Clerk dashboard config and sign-in screens, onboarding UI, org profile screen.
 
-**Not started:** Send flow, public viewer, payments, PDF generation, email/reminders, file uploads/storage quotas, invitation UI, subscription billing sync, downgrade grace, admin panel, export, security hardening, tests beyond utils.
+**Not started:** Public viewer, payments, email reminders, file uploads/storage quotas, invitation UI, subscription billing sync, downgrade grace, admin panel, export, security hardening, tests beyond utils.
 
 Reference `docs/TASKS.md` for the full checklist with completion status.
 

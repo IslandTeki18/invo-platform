@@ -713,25 +713,41 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 16. Invoice send flow
 
 ### 16.1 Send validation
-- [ ] Check sender role is allowed
-- [ ] Check org onboarding readiness
-- [ ] Check org business info exists
-- [ ] Check Stripe connected state exists
-- [ ] Check client email exists
-- [ ] Check invoice has valid totals
-- [ ] Check invoice is not already sent/paid/void in invalid state
+- [x] Check invoice status is DRAFT (`isValidStatusTransition` from `@repo/utils`)
+- [x] Check sender role is OWNER or ADMIN (`canSendInvoice` from `@repo/utils`)
+- [x] Check org readiness: name set, business address set, Stripe connected (`isReadyToSendInvoice` from `@repo/utils`)
+- [x] Check invoice total > 0 (reject zero-amount invoices)
 
 ### 16.2 Send mutation
-- [ ] Generate 32-char hex access token
-- [ ] Save access token to invoice
-- [ ] Generate public invoice URL
-- [ ] Transition status from draft to sent
-- [ ] Set sent timestamp
-- [ ] Trigger PDF generation job/event
-- [ ] Trigger invoice email send job/event
+- [x] Re-snapshot client from source record at send time (freeze current client data, not draft-time snapshot)
+- [x] Generate 32-char hex access token (adapt `generateAccessToken` from `@repo/utils` to use `crypto.getRandomValues` for Convex runtime compatibility — Node.js `crypto.randomBytes` is not available in Convex mutations)
+- [x] Save access token to invoice
+- [x] Transition status from DRAFT to SENT
+- [x] Set `sentAt` timestamp
+- [x] Recalculate and freeze totals (server-side, per existing pattern)
+- [x] Log invoice send event to `logs` table
+- [x] Schedule PDF generation action
+- [x] Schedule email send action
 
-### 16.3 Audit
-- [ ] Log invoice send event
+### 16.3 PDF generation action
+- [x] Create Convex action in `convex/actions/pdf.ts`
+- [x] Accept invoiceId, fetch invoice data from DB
+- [x] Render PDF using `@react-pdf/renderer` (per decision 008)
+- [x] Store generated PDF via Convex File Storage
+- [x] Link stored file to invoice (create `files` + `attachments` records)
+
+### 16.4 Email send action
+- [x] Create Convex action in `convex/actions/email.ts`
+- [x] Accept invoiceId and recipient details
+- [x] Check email rate limit (50/hr per org, using `rateLimitBuckets` table and helpers from `@repo/utils`)
+- [x] Construct email from `InvoiceSendEmailData` type (`@repo/types`)
+- [x] Send via Resend API (`RESEND_API_KEY` env var)
+- [x] From: `invoices@invo.app`, Reply-To: org owner email (per decision 006)
+- [x] Increment rate limit bucket on success
+- [x] Handle send failure gracefully (log error, do not roll back invoice status)
+
+### 16.5 Audit
+- [x] Log invoice send event with actorId, orgId, entityType, entityId, metadata
 
 ---
 
@@ -944,12 +960,12 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 25. Email system with Resend
 
 ### 25.1 Templates
-- [ ] Create invoice send email template
+- [x] Create invoice send email template
 - [ ] Create payment receipt email template
 - [ ] Create reminder email template
 
 ### 25.2 Core sends
-- [ ] Send invoice email on invoice send
+- [x] Send invoice email on invoice send
 - [ ] Send payment receipt after payment success
 - [ ] Add resend invoice email action
 

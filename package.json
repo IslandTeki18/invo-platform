@@ -27,6 +27,8 @@
     "typescript-eslint": "^8.57.0"
   },
   "dependencies": {
-    "convex": "^1.33.1"
+    "@react-pdf/renderer": "^4.3.2",
+    "convex": "^1.33.1",
+    "resend": "^6.9.4"
   }
 }
