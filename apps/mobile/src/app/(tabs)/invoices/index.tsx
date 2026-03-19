@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   SectionList,
   StyleSheet,
   View,
@@ -12,7 +11,6 @@ import { useQuery } from 'convex/react';
 
 import { api } from '../../../../../../convex/_generated/api';
 import type { Id } from '../../../../../../convex/_generated/dataModel';
-import { formatMoney } from '@repo/utils';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useCurrentOrg } from '@/hooks/use-current-org';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,98 +18,14 @@ import { ThemedText } from '@/components/primitives/themed-text';
 import { ThemedView } from '@/components/primitives/themed-view';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormButton } from '@/components/form';
+import { InvoiceRow } from '@/components/invoice/invoice-row';
+import type { InvoiceItem } from '@/components/invoice/invoice-row';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
 const STATUS_ORDER = ['DRAFT', 'SENT', 'VIEWED', 'PAID', 'VOID'] as const;
-
-type InvoiceStatus = (typeof STATUS_ORDER)[number];
-
-// ---------------------------------------------------------------------------
-// Status badge
-// ---------------------------------------------------------------------------
-
-function StatusBadge({ status }: { status: string }) {
-  const theme = useTheme();
-
-  const badgeColor = useMemo(() => {
-    switch (status as InvoiceStatus) {
-      case 'DRAFT':
-        return theme.textSecondary;
-      case 'SENT':
-        return theme.accent;
-      case 'VIEWED':
-        return theme.accent;
-      case 'PAID':
-        return '#22C55E';
-      case 'VOID':
-        return theme.destructive;
-      default:
-        return theme.textSecondary;
-    }
-  }, [status, theme]);
-
-  return (
-    <View style={[styles.badge, { backgroundColor: badgeColor }]}>
-      <ThemedText type="small" style={styles.badgeText}>
-        {status}
-      </ThemedText>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Invoice row
-// ---------------------------------------------------------------------------
-
-type InvoiceItem = {
-  _id: Id<'invoices'>;
-  clientSnapshot?: { name: string; email: string; phone?: string };
-  total: number;
-  status: string;
-  createdAt: number;
-};
-
-function InvoiceRow({
-  invoice,
-  onPress,
-}: {
-  invoice: InvoiceItem;
-  onPress?: () => void;
-}) {
-  const theme = useTheme();
-
-  const date = new Date(invoice.createdAt).toLocaleDateString();
-  const isDraft = invoice.status === 'DRAFT';
-
-  return (
-    <Pressable
-      onPress={isDraft ? onPress : undefined}
-      style={({ pressed }) => [
-        styles.row,
-        { backgroundColor: theme.backgroundElement },
-        pressed && isDraft && { opacity: 0.7 },
-      ]}
-    >
-      <View style={styles.rowMain}>
-        <ThemedText type="default" style={styles.clientName}>
-          {invoice.clientSnapshot?.name ?? 'No Client'}
-        </ThemedText>
-        <ThemedText type="default" style={styles.amount}>
-          {formatMoney(invoice.total)}
-        </ThemedText>
-      </View>
-      <View style={styles.rowSub}>
-        <StatusBadge status={invoice.status} />
-        <ThemedText type="small" themeColor="textSecondary">
-          {date}
-        </ThemedText>
-      </View>
-    </Pressable>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Section header
@@ -250,38 +164,5 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-  },
-  row: {
-    borderRadius: Spacing.two,
-    padding: Spacing.three,
-    gap: Spacing.one,
-    marginBottom: Spacing.two,
-  },
-  rowMain: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  rowSub: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.two,
-  },
-  clientName: {
-    flex: 1,
-  },
-  amount: {
-    fontWeight: '600',
-  },
-  badge: {
-    borderRadius: 999,
-    paddingHorizontal: Spacing.two,
-    paddingVertical: 2,
-  },
-  badgeText: {
-    color: '#ffffff',
-    fontSize: 11,
-    lineHeight: 16,
-    fontWeight: '600',
   },
 });
