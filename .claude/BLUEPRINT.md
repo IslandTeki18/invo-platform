@@ -1,1497 +1,1647 @@
-Blueprint Document
+# Blueprint Document
 
-Invoicing Platform — Implementation Blueprint
+## Invoicing Platform — Implementation Blueprint
 
 This is a multi-app product with shared business logic, auth, billing, file storage, public invoice delivery, and admin tooling. The safest build order is:
-	1.	establish repo and shared contracts
-	2.	build backend domain and permission model
-	3.	build onboarding and organization lifecycle
-	4.	build core invoice creation flow
-	5.	build public invoice delivery and payments
-	6.	add email, PDF, attachments, and storage enforcement
-	7.	add membership, billing upgrades/downgrades, exports, admin tooling
-	8.	harden with limits, logs, and cleanup jobs
+ 1. establish repo and shared contracts
+ 2. build backend domain and permission model
+ 3. build onboarding and organization lifecycle
+ 4. build core invoice creation flow
+ 5. build public invoice delivery and payments
+ 6. add email, PDF, attachments, and storage enforcement
+ 7. add membership, billing upgrades/downgrades, exports, admin tooling
+ 8. harden with limits, logs, and cleanup jobs
 
 The system should be built vertically, not by isolated technical layer only. Each phase should end in something usable.
 
 ⸻
 
-1. Build Strategy
+## 1. Build Strategy
 
-Product surfaces
-	•	apps/mobile-app — primary authenticated product
-	•	apps/invoice-viewer — public invoice experience on org subdomain
-	•	apps/marketing-site — pricing, auth entry, payment success page
-	•	apps/admin-panel — internal support/admin tools
+### Product surfaces
+- apps/mobile-app — primary authenticated product
+- apps/invoice-viewer — public invoice experience on org subdomain
+- apps/marketing-site — pricing, auth entry, payment success page
+- apps/admin-panel — internal support/admin tools
 
-Shared packages
-	•	packages/ui — cross-platform design primitives where feasible
-	•	packages/utils — formatting, math, validation, permissions, storage helpers, token helpers
-	•	packages/types — DTOs, enums, schema-derived types, shared API contracts
+### Shared packages
+- packages/ui — cross-platform design primitives where feasible
+- packages/utils — formatting, math, validation, permissions, storage helpers, token helpers
+- packages/types — DTOs, enums, schema-derived types, shared API contracts
 
-Core dependencies between systems
-	•	Clerk identity drives all authenticated user identity
-	•	Convex is source of truth for app data, permissions, logs, rate limits, invitations
-	•	Stripe Billing manages user subscription tier
-	•	Stripe Checkout handles invoice payment
-	•	Stripe Tax calculates invoice tax
-	•	Resend handles outbound email
-	•	storage quota logic sits in Convex and is enforced before file writes
-	•	public invoice delivery depends on org subdomain + invoice token + invoice status
+### Core dependencies between systems
+- Clerk identity drives all authenticated user identity
+- Convex is source of truth for app data, permissions, logs, rate limits, invitations
+- Stripe Billing manages user subscription tier
+- Stripe Checkout handles invoice payment
+- Stripe Tax calculates invoice tax
+- Resend handles outbound email
+- storage quota logic sits in Convex and is enforced before file writes
+- public invoice delivery depends on org subdomain + invoice token + invoice status
 
-Recommended delivery order
-	•	foundation
-	•	auth + users + organizations
-	•	onboarding gate
-	•	clients/items/expenses
-	•	invoice draft flow
-	•	invoice send flow
-	•	public viewer
-	•	payment flow
-	•	PDF generation
-	•	email + reminders
-	•	attachments + storage quota
-	•	memberships + invitations
-	•	subscription enforcement
-	•	admin panel
-	•	exports/logging/security hardening
-	•	final QA and release
+### Recommended delivery order
+- foundation
+- auth + users + organizations
+- onboarding gate
+- clients/items/expenses
+- invoice draft flow
+- invoice send flow
+- public viewer
+- payment flow
+- PDF generation
+- email + reminders
+- attachments + storage quota
+- memberships + invitations
+- subscription enforcement
+- admin panel
+- exports/logging/security hardening
+- final QA and release
 
-⸻
+---
 
-2. System Design Blueprint
+## 2. System Design Blueprint
 
-2.1 Domain model
+### 2.1 Domain Model
 
-User
-
+#### User
 Represents authenticated account and billing owner.
 
-Key responsibilities:
-	•	maps Clerk user to internal user record
-	•	stores subscription tier
-	•	enforces org count limit
-	•	owns user-level item presets
+**Key responsibilities:**
+- Maps Clerk user to internal user record
+- Stores subscription tier
+- Enforces org count limit
+- Owns user-level item presets
 
-Organization
+---
 
+#### Organization
 Represents workspace/business.
 
-Key responsibilities:
-	•	contains operational data
-	•	has immutable random subdomain
-	•	stores business info and branding
-	•	stores storage usage
-	•	gates invoice sending until onboarding complete
+**Key responsibilities:**
+- Contains operational data
+- Has immutable random subdomain
+- Stores business info and branding
+- Stores storage usage
+- Gates invoice sending until onboarding complete
 
-Membership
+---
 
+#### Membership
 Represents user access within an org.
 
-Key responsibilities:
-	•	role assignment
-	•	permission enforcement
-	•	owner/admin continuity rules
+**Key responsibilities:**
+- Role assignment
+- Permission enforcement
+- Owner/admin continuity rules
 
-Invitation
+---
 
+#### Invitation
 Represents pending org invitation.
 
-Key responsibilities:
-	•	invite existing user by email
-	•	expires after 24 hours
-	•	revocable
-	•	role defaults to member
+**Key responsibilities:**
+- Invite existing user by email
+- Expires after 24 hours
+- Revocable
+- Role defaults to member
 
-Client
+---
 
+#### Client
 Represents invoice recipient.
 
-Key responsibilities:
-	•	org scoped
-	•	duplicate email blocked within org
-	•	archival instead of deletion
+**Key responsibilities:**
+- Org scoped
+- Duplicate email blocked within org
+- Archival instead of deletion
 
-Item Preset
+---
 
+#### Item Preset
 Represents reusable invoice line item template.
 
-Key responsibilities:
-	•	user scoped
-	•	invoice-safe deletion behavior
+**Key responsibilities:**
+- User scoped
+- Invoice-safe deletion behavior
 
-Expense
+---
 
+#### Expense
 Represents reusable cost entry.
 
-Key responsibilities:
-	•	org scoped
-	•	may be attached to multiple invoices through duplication into invoice snapshot
+**Key responsibilities:**
+- Org scoped
+- May be attached to multiple invoices through duplication into invoice snapshot
 
-Invoice
+---
 
+#### Invoice
 Represents commercial document and payment container.
 
-Key responsibilities:
-	•	stores snapshots for immutable invoice rendering
-	•	manages lifecycle statuses
-	•	owns tokenized public access
-	•	links to payment and PDF artifacts
+**Key responsibilities:**
+- Stores snapshots for immutable invoice rendering
+- Manages lifecycle statuses
+- Owns tokenized public access
+- Links to payment and PDF artifacts
 
-Invoice View Event
+---
 
+#### Invoice View Event
 Represents public invoice views.
 
-Key responsibilities:
-	•	append-only tracking
-	•	timestamped
-	•	internal only in V1
+**Key responsibilities:**
+- Append-only tracking
+- Timestamped
+- Internal only in V1
 
-Log Event
+---
 
+#### Log Event
 Represents audit/system logging.
 
-Key responsibilities:
-	•	event filtering in admin panel
-	•	30-day retention
+**Key responsibilities:**
+- Event filtering in admin panel
+- 30-day retention
 
-Rate Limit Bucket
+---
 
+#### Rate Limit Bucket
 Represents usage throttle state.
 
-Key responsibilities:
-	•	payment attempt enforcement
-	•	email send enforcement
+**Key responsibilities:**
+- Payment attempt enforcement
+- Email send enforcement
 
-⸻
+---
 
-2.2 Critical architecture decisions
+### 2.2 Critical Architecture Decisions
 
-Decision: snapshot invoice data at send time
+#### Decision: Snapshot invoice data at send time
 
 Do not rely only on live client/item/expense data when rendering sent invoices. Sent invoices should include:
-	•	client snapshot
-	•	line item snapshot
-	•	expense snapshot
-	•	totals snapshot
-	•	tax snapshot
-	•	branding snapshot if needed for exact historical rendering
 
-Reason:
-	•	future edits to client/items must not mutate historical sent invoices unexpectedly
+- Client snapshot  
+- Line item snapshot  
+- Expense snapshot  
+- Totals snapshot  
+- Tax snapshot  
+- Branding snapshot (if needed for exact historical rendering)
 
-Decision: keep draft invoice editable, sent invoice controlled
+**Reason:**
+- Future edits to client/items must not mutate historical sent invoices unexpectedly
+
+---
+
+#### Decision: Keep draft invoice editable, sent invoice controlled
 
 Use two modes:
-	•	draft invoice: editable document builder
-	•	sent/viewed/paid/void invoice: restricted update rules
 
-Reason:
-	•	avoids ambiguous historical payment records
-	•	aligns with auditability
+- Draft invoice → editable document builder  
+- Sent / viewed / paid / void invoice → restricted update rules  
 
-Decision: store money in integer cents everywhere
+**Reason:**
+- Avoids ambiguous historical payment records  
+- Aligns with auditability  
+
+---
+
+#### Decision: Store money in integer cents everywhere
 
 All monetary values:
-	•	unit price
-	•	subtotal
-	•	discount
-	•	tax
-	•	total
-	•	expenses
 
-Reason:
-	•	avoids floating point errors
+- Unit price  
+- Subtotal  
+- Discount  
+- Tax  
+- Total  
+- Expenses  
 
-Decision: compute invoice totals in shared pure utility layer
+**Reason:**
+- Avoids floating point errors  
+
+---
+
+#### Decision: Compute invoice totals in shared pure utility layer
 
 One canonical invoice math engine used by:
-	•	mobile draft preview
-	•	backend validation
-	•	public viewer formatting
-	•	PDF generation
 
-Reason:
-	•	eliminates mismatch between surfaces
+- Mobile draft preview  
+- Backend validation  
+- Public viewer formatting  
+- PDF generation  
 
-Decision: separate private file storage metadata from invoice snapshot refs
+**Reason:**
+- Eliminates mismatch between surfaces  
+
+---
+
+#### Decision: Separate private file storage metadata from invoice snapshot refs
 
 Files should have storage records with:
-	•	orgId
-	•	owner entity type/id
-	•	size
-	•	mime type
-	•	storage path
-	•	visibility mode
-	•	uploadedAt
-
-Reason:
-	•	central quota enforcement
-	•	simplifies cleanup on deletion
-
-⸻
-
-3. Phase-by-Phase Blueprint
-
-Phase 0 — Foundation and repo setup
-
-Goals
-	•	monorepo structure working
-	•	type-safe shared packages in place
-	•	local development stable
-	•	CI basics established
-
-Deliverables
-	•	Turborepo configured
-	•	app shells booting
-	•	packages linked
-	•	lint/typecheck/format scripts
-	•	environment variable strategy
-	•	deployment targets identified
-
-Work
-	1.	initialize monorepo
-	2.	create all app folders
-	3.	create shared ui, utils, types
-	4.	set TS project references or path aliasing
-	5.	standardize ESLint, Prettier, TS configs
-	6.	set env loading strategy per app
-	7.	add basic CI pipeline:
-	•	install
-	•	lint
-	•	typecheck
-	•	build impacted apps
-	8.	add branch protection and preview deployments
-
-Exit criteria
-	•	all apps run
-	•	shared packages import cleanly
-	•	CI passes on empty app shells
-
-⸻
-
-Phase 1 — Backend schema and auth foundation
-
-Goals
-	•	internal user record exists
-	•	org model exists
-	•	membership and permission model exists
-	•	Clerk identity mapped into Convex
-
-Deliverables
-	•	Convex schema for core entities
-	•	auth helpers
-	•	role permission helpers
-	•	current user bootstrap flow
-
-Work
-	1.	define enums:
-	•	subscription tiers
-	•	org roles
-	•	invoice statuses
-	•	invite statuses
-	•	log event types
-	2.	create Convex schema tables
-	3.	add Clerk webhook or lazy-sync path to create internal user record
-	4.	create current-user query
-	5.	create organization creation mutation
-	6.	create membership creation on org creation
-	7.	implement org limit enforcement by user subscription tier
-	8.	create permission utility layer:
-	•	canManageBilling
-	•	canInviteMembers
-	•	canSendInvoices
-	•	canManageExpenses
-	•	etc.
-
-Exit criteria
-	•	authenticated user gets internal profile
-	•	user can create org within tier limit
-	•	unauthorized role access blocked on backend
-
-⸻
-
-Phase 2 — Onboarding and organization readiness
-
-Goals
-	•	force minimal setup before sending invoices
-	•	store org business data
-	•	prepare Stripe connect dependency boundary
-
-Deliverables
-	•	onboarding state model
-	•	org profile editor
-	•	readiness checks
-
-Work
-	1.	create onboarding progress model
-	2.	implement organization business info update
-	3.	add immutable org subdomain generation at creation
-	4.	add subdomain uniqueness enforcement
-	5.	add readiness helper:
-	•	org name present
-	•	business address present
-	•	Stripe connected
-	6.	create UI gate in mobile app/dashboard
-	7.	create onboarding completion screens
-	8.	stub Stripe connect integration state if full connect arrives later in sequence
-
-Exit criteria
-	•	org exists with immutable subdomain
-	•	invoice sending blocked until readiness true
-
-⸻
-
-Phase 3 — Clients, item presets, expenses
-
-Goals
-	•	business data entry foundation exists
-	•	invoice composer has supporting entities
-
-Deliverables
-	•	CRUD for clients
-	•	CRUD for item presets
-	•	CRUD for expenses
-	•	archival behavior for clients
-
-Work
-	1.	client create/edit/archive/restore
-	2.	duplicate email prevention within org
-	3.	item preset create/edit/delete
-	4.	item preset user-level scoping
-	5.	expense create/edit/archive if needed
-	6.	expense selection helpers for invoice building
-	7.	list screens in mobile app
-	8.	basic validation and empty states
-
-Exit criteria
-	•	org user can manage clients/items/expenses with role enforcement
-	•	archived clients hidden from invoice selection
-
-⸻
-
-Phase 4 — Draft invoice system
-
-Goals
-	•	create invoice drafts in mobile app
-	•	math rules centralized
-	•	invoice data model stable before send flow
-
-Deliverables
-	•	invoice draft schema
-	•	line item editing UI
-	•	discount/tax/total calculation engine
-	•	draft invoice list grouped by status
-
-Work
-	1.	define invoice schema
-	2.	define line item and expense snapshot substructures
-	3.	implement invoice math utility:
-	•	decimal quantity support
-	•	line-level rounding
-	•	discount before tax
-	4.	create draft invoice mutation
-	5.	build invoice composer UI
-	6.	add client picker
-	7.	add line items add/edit/remove/reorder
-	8.	add expenses attach flow
-	9.	add discount selection
-	10.	add tax configuration placeholder/data structure
-	11.	create invoice preview query
-	12.	create invoice list grouped by status
-
-Exit criteria
-	•	member can create draft invoice
-	•	totals consistent across client and backend validation
-	•	draft persists and reloads correctly
-
-⸻
-
-Phase 5 — Invoice sending and public access
-
-Goals
-	•	sent invoices become publicly viewable by secure tokenized URL
-	•	invoice status transitions start functioning
-
-Deliverables
-	•	send invoice mutation
-	•	access token generation
-	•	public invoice viewer resolver
-	•	first-view tracking
-	•	status transition logic
-
-Work
-	1.	implement send-invoice validation:
-	•	role allowed
-	•	org ready
-	•	client email exists
-	•	invoice total valid
-	2.	generate 32-char hex access token
-	3.	generate invoice public URL using org subdomain
-	4.	set status from draft to sent
-	5.	record sent timestamp
-	6.	build public invoice lookup by:
-	•	org subdomain
-	•	invoiceId
-	•	token
-	7.	mark status viewed on first successful load
-	8.	append view event on every load
-	9.	disable access when void
-	10.	build viewer states:
-
-	•	unpaid
-	•	paid
-	•	void
-
-Exit criteria
-	•	sent invoice opens publicly only with valid token
-	•	first public load marks invoice viewed
-	•	void invoice disables payment actions
-
-⸻
-
-Phase 6 — Stripe Checkout and payment lifecycle
-
-Goals
-	•	invoices can be paid online
-	•	payment state reconciles safely
-	•	payment attempt limits enforced
-
-Deliverables
-	•	checkout session creation
-	•	post-payment webhook handling
-	•	payment success page
-	•	rate limit logic
-
-Work
-	1.	create checkout session from sent/viewed unpaid invoice
-	2.	include invoice metadata in Stripe session
-	3.	configure Stripe Tax input path
-	4.	redirect success to marketing-site page
-	5.	implement Stripe webhook for successful payment
-	6.	mark invoice paid on verified webhook
-	7.	persist Stripe session/reference ids
-	8.	add manual paid mark flow in mobile app with payment method note
-	9.	implement payment attempt rate limit:
-	•	10 attempts per hour
-	•	15-minute lock
-	10.	log failures and lockouts
-	11.	update public viewer banner when paid
-
-Exit criteria
-	•	valid invoice can be paid
-	•	webhook marks invoice paid exactly once
-	•	abuse attempts are limited
-
-⸻
-
-Phase 7 — PDF generation
-
-Goals
-	•	invoice PDF generation is reliable and consistent with public HTML rendering
-	•	preview and send flows can reuse same template
-
-Deliverables
-	•	HTML invoice rendering layer
-	•	server-side PDF generation pipeline
-	•	cached preview behavior
-	•	stored PDF metadata
-
-Work
-	1.	define render model for invoice HTML template
-	2.	create invoice template component independent from app chrome
-	3.	create server render function
-	4.	create PDF generation function
-	5.	store generated PDF file record
-	6.	generate on send
-	7.	generate on preview request
-	8.	implement 5-minute preview cache
-	9.	allow PDF download only when unpaid
-	10.	ensure images and branding render correctly
-
-Exit criteria
-	•	generated PDF matches invoice viewer content closely
-	•	preview requests reuse cache within 5 minutes
-
-⸻
-
-Phase 8 — Attachments, logos, file storage, quotas
-
-Goals
-	•	support attachments and branding safely
-	•	enforce tier storage limits consistently
-
-Deliverables
-	•	file upload pipeline
-	•	file validation
-	•	quota enforcement
-	•	cleanup behavior on deletion
-
-Work
-	1.	create file metadata table
-	2.	create quota helper by subscription tier
-	3.	validate file type:
-	•	images
-	•	PDFs
-	4.	validate file count max 2 per invoice
-	5.	validate file size max 5MB each
-	6.	enforce org storage quota before upload
-	7.	support org logo upload
-	8.	support line item image refs
-	9.	support invoice attachments visible to client
-	10.	count stored PDFs toward quota
-	11.	decrement quota on hard delete
-
-Exit criteria
-	•	storage used reflects uploads accurately
-	•	over-quota uploads blocked cleanly
-
-⸻
-
-Phase 9 — Email system and reminders
-
-Goals
-	•	emails are sent safely with limits
-	•	reminders stop after payment
-
-Deliverables
-	•	invoice send email
-	•	payment receipt email
-	•	reminder scheduler
-	•	hourly org email rate limit
-
-Work
-	1.	design email templates
-	2.	send invoice email at send time
-	3.	send payment receipt after payment confirmed
-	4.	add reminder scheduling model
-	5.	create scheduled job:
-	•	3 days before due
-	•	on due date
-	6.	suppress reminders if invoice paid or void
-	7.	implement org email rate limit:
-	•	50 per hour
-	8.	no auto retry on limit breach
-	9.	log send attempts and failures
-	10.	add resend action in mobile app
-
-Exit criteria
-	•	invoice emails deliver with public link
-	•	reminders stop immediately after payment
-
-⸻
-
-Phase 10 — Memberships and invitations
-
-Goals
-	•	owner/admin can manage team access
-	•	invite flow works with existing users only
-	•	role safety rules enforced
-
-Deliverables
-	•	invitation CRUD
-	•	invite accept page on web
-	•	member management UI
-	•	leave/remove/role-change rules
-
-Work
-	1.	invitation create with email and org role
-	2.	require invited email to match existing user
-	3.	create expiration after 24 hours
-	4.	support revoke
-	5.	build invite acceptance web page
-	6.	require Clerk auth before accept
-	7.	create membership on accept
-	8.	deep link to mobile app after join
-	9.	support member removal
-	10.	support role changes
-	11.	enforce:
-
-	•	owner cannot be removed
-	•	at least one admin/owner must remain
-
-	12.	support leave organization
-	13.	if owner leaves, trigger destructive delete confirmation flow
-
-Exit criteria
-	•	invite lifecycle is complete and permission safe
-	•	org cannot lose all admins/owners
-
-⸻
-
-Phase 11 — Subscription billing and org-limit enforcement
-
-Goals
-	•	user subscription tier affects org count and storage
-	•	downgrade grace behavior enforced
-
-Deliverables
-	•	Stripe Billing integration
-	•	subscription sync
-	•	downgrade workflow
-	•	grace-period enforcement
-
-Work
-	1.	map Stripe subscription to internal tier
-	2.	sync subscription changes by webhook
-	3.	enforce org creation limit by tier
-	4.	enforce storage quota by tier
-	5.	handle upgrade immediately and prorated
-	6.	on downgrade, calculate org excess
-	7.	require user to choose orgs to delete
-	8.	mark excess orgs read-only during 7-day grace
-	9.	schedule deletion after grace
-	10.	cancel deletion if upgrade happens during grace
-
-Exit criteria
-	•	tier changes affect capabilities correctly
-	•	downgrade path is deterministic and auditable
-
-⸻
-
-Phase 12 — Data export and organization deletion
-
-Goals
-	•	destructive actions are deliberate
-	•	user can extract org data
-	•	deletion fully cleans up dependencies
-
-Deliverables
-	•	JSON export
-	•	org hard delete workflow
-	•	cleanup jobs
-
-Work
-	1.	create org export assembler
-	2.	include clients, invoices, expenses, memberships, logs as allowed
-	3.	implement export generation endpoint/job
-	4.	implement org delete confirmation requiring exact name
-	5.	hard delete org data
-	6.	delete file metadata and actual stored files
-	7.	remove Stripe references where needed
-	8.	log deletion event
-
-Exit criteria
-	•	export works
-	•	deleted org is fully removed with no orphan files
-
-⸻
-
-Phase 13 — Dashboard, polish, and usability layers
-
-Goals
-	•	product is usable day-to-day
-	•	key operational views exist
-
-Deliverables
-	•	dashboard
-	•	recent invoices
-	•	unpaid totals
-	•	quick actions
-	•	dark/light theme support
-	•	biometric unlock in mobile
-
-Work
-	1.	dashboard data aggregation queries
-	2.	quick action buttons
-	3.	recent invoices list
-	4.	unpaid amount and count widgets
-	5.	invoice list grouped by status and newest first
-	6.	theme support in mobile
-	7.	system theme detection in public viewer
-	8.	biometric unlock in mobile
-	9.	persistent login handling
-
-Exit criteria
-	•	owner/admin can run daily invoicing workflow from mobile
-
-⸻
-
-Phase 14 — Admin panel
-
-Goals
-	•	internal operators can support users and investigate issues
-
-Deliverables
-	•	user search
-	•	invoice search
-	•	logs viewer
-	•	refunds trigger
-	•	impersonation
-	•	delete user
-
-Work
-	1.	admin auth boundary
-	2.	search users by email or ID
-	3.	search invoices
-	4.	log filtering by event type
-	5.	trigger refunds flow
-	6.	impersonation with audit logging
-	7.	delete users
-	8.	explicitly block invoice editing in admin panel
-
-Exit criteria
-	•	support staff can inspect and act without direct DB access
-
-⸻
-
-Phase 15 — Logging, security, cleanup, release hardening
-
-Goals
-	•	auditable behavior
-	•	abuse resistance
-	•	operational readiness
-
-Deliverables
-	•	centralized logs
-	•	cleanup jobs
-	•	retention policies
-	•	final QA matrix
-
-Work
-	1.	create log write helper
-	2.	log:
-	•	payments
-	•	email sends
-	•	auth events
-	•	invoice changes
-	•	membership changes
-	3.	add 30-day retention cleanup job
-	4.	verify token entropy and generation
-	5.	verify access-control coverage
-	6.	verify rate-limit buckets
-	7.	test destructive actions
-	8.	test failure/retry cases
-	9.	monitor metrics and alerting hooks if available
-
-Exit criteria
-	•	production-ready baseline with safe failure behavior
-
-⸻
-
-4. Initial Chunk Breakdown
+
+- orgId  
+- owner entity type/id  
+- size  
+- mime type  
+- storage path  
+- visibility mode  
+- uploadedAt  
+
+**Reason:**
+- Central quota enforcement  
+- Simplifies cleanup on deletion  
+
+---
+
+## 3. Phase-by-Phase Blueprint
+
+---
+
+### Phase 0 — Foundation and Repo Setup
+
+#### Goals
+- Monorepo structure working
+- Type-safe shared packages in place
+- Local development stable
+- CI basics established
+
+#### Deliverables
+- Turborepo configured
+- App shells booting
+- Packages linked
+- Lint / typecheck / format scripts
+- Environment variable strategy
+- Deployment targets identified
+
+#### Work
+1. Initialize monorepo  
+2. Create all app folders  
+3. Create shared `ui`, `utils`, `types`  
+4. Set TS project references or path aliasing  
+5. Standardize ESLint, Prettier, TS configs  
+6. Set env loading strategy per app  
+7. Add basic CI pipeline:
+   - install
+   - lint
+   - typecheck
+   - build impacted apps  
+8. Add branch protection and preview deployments  
+
+#### Exit Criteria
+- All apps run  
+- Shared packages import cleanly  
+- CI passes on empty app shells  
+
+---
+
+### Phase 1 — Backend Schema and Auth Foundation
+
+#### Goals
+- Internal user record exists  
+- Org model exists  
+- Membership and permission model exists  
+- Clerk identity mapped into Convex  
+
+#### Deliverables
+- Convex schema for core entities  
+- Auth helpers  
+- Role permission helpers  
+- Current user bootstrap flow  
+
+#### Work
+1. Define enums:
+   - subscription tiers  
+   - org roles  
+   - invoice statuses  
+   - invite statuses  
+   - log event types  
+2. Create Convex schema tables  
+3. Add Clerk webhook or lazy-sync path to create internal user record  
+4. Create current-user query  
+5. Create organization creation mutation  
+6. Create membership on org creation  
+7. Implement org limit enforcement by subscription tier  
+8. Create permission utility layer:
+   - `canManageBilling`  
+   - `canInviteMembers`  
+   - `canSendInvoices`  
+   - `canManageExpenses`  
+
+#### Exit Criteria
+- Authenticated user gets internal profile  
+- User can create org within tier limit  
+- Unauthorized access blocked at backend  
+
+---
+
+### Phase 2 — Onboarding and Organization Readiness
+
+#### Goals
+- Force minimal setup before sending invoices  
+- Store org business data  
+- Prepare Stripe connect dependency boundary  
+
+#### Deliverables
+- Onboarding state model  
+- Org profile editor  
+- Readiness checks  
+
+#### Work
+1. Create onboarding progress model  
+2. Implement organization business info update  
+3. Add immutable org subdomain generation  
+4. Enforce subdomain uniqueness  
+5. Add readiness helper:
+   - org name present  
+   - business address present  
+   - Stripe connected  
+6. Create UI gate in app  
+7. Create onboarding completion screens  
+8. Stub Stripe connect state  
+
+#### Exit Criteria
+- Org exists with immutable subdomain  
+- Invoice sending blocked until ready  
+
+---
+
+### Phase 3 — Clients, Item Presets, Expenses
+
+#### Goals
+- Business data entry foundation exists  
+- Invoice composer dependencies exist  
+
+#### Deliverables
+- CRUD for clients  
+- CRUD for item presets  
+- CRUD for expenses  
+- Client archival behavior  
+
+#### Work
+1. Client create/edit/archive/restore  
+2. Prevent duplicate email per org  
+3. Item preset create/edit/delete  
+4. User-scoped item presets  
+5. Expense create/edit/archive  
+6. Expense selection helpers  
+7. List screens  
+8. Validation and empty states  
+
+#### Exit Criteria
+- Data managed with role enforcement  
+- Archived clients excluded from selection  
+
+---
+
+### Phase 4 — Draft Invoice System
+
+#### Goals
+- Draft invoices created in app  
+- Centralized math rules  
+- Stable data model before send  
+
+#### Deliverables
+- Invoice draft schema  
+- Line item UI  
+- Calculation engine  
+- Draft list grouped by status  
+
+#### Work
+1. Define invoice schema  
+2. Define snapshot substructures  
+3. Implement math utility:
+   - decimal quantities  
+   - line rounding  
+   - discount before tax  
+4. Create draft mutation  
+5. Build composer UI  
+6. Add client picker  
+7. Add line item CRUD  
+8. Add expense attach flow  
+9. Add discount selection  
+10. Add tax structure  
+11. Create preview query  
+12. Create grouped invoice list  
+
+#### Exit Criteria
+- Draft creation works  
+- Totals consistent across systems  
+- Draft persists correctly  
+
+---
+
+### Phase 5 — Invoice Sending and Public Access
+
+#### Goals
+- Public invoice access via token  
+- Status transitions active  
+
+#### Deliverables
+- Send mutation  
+- Token generation  
+- Public resolver  
+- View tracking  
+- Status transitions  
+
+#### Work
+1. Validate send:
+   - role allowed  
+   - org ready  
+   - client email exists  
+   - total valid  
+2. Generate 32-char token  
+3. Build public URL  
+4. Set status → sent  
+5. Record timestamp  
+6. Public lookup by:
+   - subdomain  
+   - invoiceId  
+   - token  
+7. Mark first view  
+8. Append view events  
+9. Disable access when void  
+10. Viewer states:
+   - unpaid  
+   - paid  
+   - void  
+
+#### Exit Criteria
+- Token required for access  
+- First view updates status  
+- Void disables actions  
+
+---
+
+### Phase 6 — Stripe Checkout and Payment Lifecycle
+
+#### Goals
+- Online payments enabled  
+- Safe reconciliation  
+- Abuse prevention  
+
+#### Deliverables
+- Checkout session  
+- Webhook handling  
+- Success page  
+- Rate limiting  
+
+#### Work
+1. Create checkout session  
+2. Attach invoice metadata  
+3. Configure Stripe Tax  
+4. Redirect success page  
+5. Handle webhook  
+6. Mark paid once  
+7. Store Stripe references  
+8. Manual paid flow  
+9. Rate limit:
+   - 10/hour  
+   - 15-minute lock  
+10. Log failures  
+11. Update viewer  
+
+#### Exit Criteria
+- Payments succeed  
+- Webhook idempotent  
+- Abuse limited  
+
+---
+
+### Phase 7 — PDF Generation
+
+#### Goals
+- Reliable PDF generation  
+- Consistent with viewer  
+
+#### Deliverables
+- HTML rendering layer  
+- PDF pipeline  
+- Cache system  
+- File metadata  
+
+#### Work
+1. Define render model  
+2. Build template component  
+3. Server render function  
+4. PDF generator  
+5. Store file record  
+6. Generate on send  
+7. Generate on preview  
+8. Add 5-minute cache  
+9. Restrict download when paid rules apply  
+10. Ensure branding correctness  
+
+#### Exit Criteria
+- PDF matches viewer  
+- Cache reused properly  
+
+---
+
+### Phase 8 — Attachments, Logos, Storage, Quotas
+
+#### Goals
+- Safe file handling  
+- Tier-based limits  
+
+#### Deliverables
+- Upload pipeline  
+- Validation  
+- Quota enforcement  
+- Cleanup system  
+
+#### Work
+1. File metadata table  
+2. Quota helper  
+3. Validate types:
+   - images  
+   - PDFs  
+4. Max 2 files per invoice  
+5. Max 5MB each  
+6. Enforce quota  
+7. Org logo upload  
+8. Line item images  
+9. Invoice attachments  
+10. Count PDFs in quota  
+11. Decrement on delete  
+
+#### Exit Criteria
+- Storage tracked accurately  
+- Over-quota blocked  
+
+---
+
+### Phase 9 — Email System and Reminders
+
+#### Goals
+- Safe email delivery  
+- Controlled reminders  
+
+#### Deliverables
+- Send email  
+- Receipt email  
+- Reminder scheduler  
+- Rate limits  
+
+#### Work
+1. Design templates  
+2. Send invoice email  
+3. Send receipt  
+4. Add scheduler  
+5. Scheduled job:
+   - 3 days before  
+   - due date  
+6. Suppress if paid/void  
+7. Rate limit:
+   - 50/hour  
+8. No auto retry  
+9. Log attempts  
+10. Resend action  
+
+#### Exit Criteria
+- Emails deliver  
+- Reminders stop on payment  
+
+---
+
+### Phase 10 — Memberships and Invitations
+
+#### Goals
+- Team management  
+- Safe role handling  
+
+#### Deliverables
+- Invitation system  
+- Accept page  
+- Member UI  
+- Role rules  
+
+#### Work
+1. Create invite  
+2. Require existing user  
+3. Expire after 24h  
+4. Revoke support  
+5. Accept page  
+6. Require auth  
+7. Create membership  
+8. Deep link to app  
+9. Remove members  
+10. Change roles  
+11. Enforce:
+   - owner cannot be removed  
+   - at least one admin remains  
+12. Leave org  
+13. Owner leave triggers delete flow  
+
+#### Exit Criteria
+- Full invite lifecycle  
+- No orphan orgs  
+
+---
+
+### Phase 11 — Subscription Billing and Org Limits
+
+#### Goals
+- Tier-based constraints  
+- Controlled downgrade  
+
+#### Deliverables
+- Stripe Billing  
+- Sync system  
+- Downgrade workflow  
+- Grace logic  
+
+#### Work
+1. Map Stripe → internal tier  
+2. Sync via webhook  
+3. Enforce org limits  
+4. Enforce storage limits  
+5. Handle upgrades  
+6. Calculate excess on downgrade  
+7. Require org selection for deletion  
+8. Mark read-only during 7-day grace  
+9. Schedule deletion  
+10. Cancel if upgraded  
+
+#### Exit Criteria
+- Tier enforcement correct  
+- Downgrade deterministic  
+
+---
+
+### Phase 12 — Data Export and Org Deletion
+
+#### Goals
+- Safe destructive actions  
+- Full data removal  
+
+#### Deliverables
+- JSON export  
+- Delete workflow  
+- Cleanup jobs  
+
+#### Work
+1. Build export assembler  
+2. Include:
+   - clients  
+   - invoices  
+   - expenses  
+   - memberships  
+   - logs  
+3. Export endpoint/job  
+4. Require name confirmation  
+5. Hard delete data  
+6. Delete files  
+7. Remove Stripe references  
+8. Log deletion  
+
+#### Exit Criteria
+- Export complete  
+- No orphan data  
+
+---
+
+### Phase 13 — Dashboard and Usability
+
+#### Goals
+- Daily usability  
+- Operational visibility  
+
+#### Deliverables
+- Dashboard  
+- Recent invoices  
+- Unpaid totals  
+- Quick actions  
+- Theme support  
+- Biometric unlock  
+
+#### Work
+1. Aggregation queries  
+2. Quick actions  
+3. Recent list  
+4. Unpaid widgets  
+5. Grouped invoice list  
+6. Theme support  
+7. Viewer theme sync  
+8. Biometric unlock  
+9. Persistent login  
+
+#### Exit Criteria
+- Full daily workflow supported  
+
+---
+
+### Phase 14 — Admin Panel
+
+#### Goals
+- Internal support tooling  
+
+#### Deliverables
+- User search  
+- Invoice search  
+- Logs viewer  
+- Refund trigger  
+- Impersonation  
+- User deletion  
+
+#### Work
+1. Admin auth boundary  
+2. Search users  
+3. Search invoices  
+4. Log filtering  
+5. Refund flow  
+6. Impersonation with audit  
+7. Delete users  
+8. Block invoice editing  
+
+#### Exit Criteria
+- Support without DB access  
+
+---
+
+### Phase 15 — Logging, Security, Cleanup, Release Hardening
+
+#### Goals
+- Auditability  
+- Abuse resistance  
+- Production readiness  
+
+#### Deliverables
+- Central logs  
+- Cleanup jobs  
+- Retention rules  
+- QA matrix  
+
+#### Work
+1. Log helper  
+2. Log:
+   - payments  
+   - emails  
+   - auth  
+   - invoice changes  
+   - membership changes  
+3. 30-day retention job  
+4. Verify token entropy  
+5. Verify access control  
+6. Verify rate limits  
+7. Test destructive actions  
+8. Test failure cases  
+9. Add monitoring hooks  
+
+#### Exit Criteria
+- Production-ready baseline  
+- Safe failure handling  
+
+---
+
+## 4. Initial Chunk Breakdown
 
 These are the first-pass implementation chunks. Each chunk should leave the repo in a working state.
 
-Chunk 1 — Monorepo foundation
-
+### Chunk 1 — Monorepo Foundation
 Repo, apps, packages, tooling, CI.
 
-Chunk 2 — Auth and internal user bootstrap
-
+### Chunk 2 — Auth and Internal User Bootstrap
 Clerk to Convex identity sync, current user query, user tier model.
 
-Chunk 3 — Organizations and memberships
-
+### Chunk 3 — Organizations and Memberships
 Org creation, membership records, role utilities, org limit enforcement.
 
-Chunk 4 — Onboarding and org settings
-
+### Chunk 4 — Onboarding and Org Settings
 Business info, immutable subdomain, readiness gating.
 
-Chunk 5 — Clients, items, expenses
-
+### Chunk 5 — Clients, Items, Expenses
 CRUD and validation for supporting invoice entities.
 
-Chunk 6 — Draft invoice composer
-
+### Chunk 6 — Draft Invoice Composer
 Invoice schema, line items, totals engine, mobile invoice draft UI.
 
-Chunk 7 — Invoice send and public link
-
+### Chunk 7 — Invoice Send and Public Link
 Token generation, sent transition, public viewer foundation.
 
-Chunk 8 — Stripe Checkout and paid status
-
+### Chunk 8 — Stripe Checkout and Paid Status
 Checkout session, webhook reconciliation, success page.
 
-Chunk 9 — PDF generation
-
+### Chunk 9 — PDF Generation
 Shared HTML invoice template, server render, preview/send generation.
 
-Chunk 10 — Attachments and storage quotas
-
+### Chunk 10 — Attachments and Storage Quotas
 Uploads, validation, quota accounting, logo support.
 
-Chunk 11 — Email system
-
+### Chunk 11 — Email System
 Invoice email, receipt email, reminders, resend flow, rate limits.
 
-Chunk 12 — Invitations and membership management
-
+### Chunk 12 — Invitations and Membership Management
 Invite, accept, revoke, role changes, leave/remove rules.
 
-Chunk 13 — Billing tiers and downgrade grace
-
+### Chunk 13 — Billing Tiers and Downgrade Grace
 Stripe Billing sync, org overage handling, grace state.
 
-Chunk 14 — Export and deletion
-
+### Chunk 14 — Export and Deletion
 JSON export, destructive delete flow, cleanup.
 
-Chunk 15 — Admin panel and logs
-
+### Chunk 15 — Admin Panel and Logs
 Search, refund trigger, impersonation, event filtering.
 
-Chunk 16 — Security hardening and final QA
-
+### Chunk 16 — Security Hardening and Final QA
 Rate limit completion, retention jobs, full regression pass.
 
-⸻
+---
 
-5. Second-Pass Breakdown Into Smaller Iterative Chunks
+## 5. Second-Pass Breakdown Into Smaller Iterative Chunks
 
 Now reduce the chunk size further so each one is safe and testable.
 
-Iteration A — Foundation
-	1.	create monorepo folders and base package manifests
-	2.	add TS configs and path aliasing
-	3.	add lint/format/typecheck scripts
-	4.	boot empty mobile/web/admin apps
-	5.	verify shared package imports
-	6.	add CI
+### Iteration A — Foundation
+1. Create monorepo folders and base package manifests  
+2. Add TS configs and path aliasing  
+3. Add lint / format / typecheck scripts  
+4. Boot empty mobile / web / admin apps  
+5. Verify shared package imports  
+6. Add CI  
 
-Iteration B — Identity and permissions
-	7.	add Clerk integration to mobile/web shells
-	8.	create internal user table
-	9.	add user bootstrap sync
-	10.	add subscription tier enums and defaults
-	11.	create membership and role enums
-	12.	create permission helper functions
-	13.	write backend auth guards
+---
 
-Iteration C — Organizations
-	14.	create org schema
-	15.	implement org creation mutation
-	16.	generate immutable random subdomain
-	17.	enforce subdomain uniqueness
-	18.	create owner membership on org creation
-	19.	enforce org count limit by tier
-	20.	add org picker/current-org state
+### Iteration B — Identity and Permissions
+7. Add Clerk integration to mobile / web shells  
+8. Create internal user table  
+9. Add user bootstrap sync  
+10. Add subscription tier enums and defaults  
+11. Create membership and role enums  
+12. Create permission helper functions  
+13. Write backend auth guards  
 
-Iteration D — Onboarding
-	21.	add org settings fields
-	22.	add business info form
-	23.	add onboarding status query
-	24.	add readiness validator
-	25.	block send actions when incomplete
-	26.	create setup checklist UI
+---
 
-Iteration E — Supporting entities
-	27.	add client schema and validation
-	28.	build client create/edit/archive flow
-	29.	enforce duplicate email block
-	30.	add item preset schema and CRUD
-	31.	add expense schema and CRUD
-	32.	list screens for clients/items/expenses
+### Iteration C — Organizations
+14. Create org schema  
+15. Implement org creation mutation  
+16. Generate immutable random subdomain  
+17. Enforce subdomain uniqueness  
+18. Create owner membership on org creation  
+19. Enforce org count limit by tier  
+20. Add org picker / current-org state  
 
-Iteration F — Invoice draft core
-	33.	add invoice schema
-	34.	add line item substructure
-	35.	add expense snapshot structure
-	36.	implement money helpers
-	37.	implement line-level rounding
-	38.	implement discount math
-	39.	implement tax-before-total order correctly
-	40.	create draft invoice mutation
-	41.	create invoice edit mutation
-	42.	create invoice preview query
+---
 
-Iteration G — Invoice composer UI
-	43.	create draft invoice screen shell
-	44.	add client selector
-	45.	add line item editor
-	46.	add expense attach flow
-	47.	add discount input
-	48.	add totals summary
-	49.	save and reload draft state
-	50.	list drafts grouped by status
+### Iteration D — Onboarding
+21. Add org settings fields  
+22. Add business info form  
+23. Add onboarding status query  
+24. Add readiness validator  
+25. Block send actions when incomplete  
+26. Create setup checklist UI  
 
-Iteration H — Send flow and public viewer
-	51.	add send invoice validation
-	52.	generate invoice token
-	53.	generate public URL
-	54.	mark status sent
-	55.	create public invoice fetch route
-	56.	validate token/subdomain/invoice match
-	57.	add first-view tracking
-	58.	mark invoice viewed on first load
-	59.	render public invoice states
+---
 
-Iteration I — Payments
-	60.	create checkout session mutation
-	61.	attach Stripe metadata
-	62.	add payment success page
-	63.	implement webhook signature verification
-	64.	mark invoice paid on successful webhook
-	65.	save payment refs
-	66.	add manual mark-paid flow
-	67.	add payment attempt limit and lock
+### Iteration E — Supporting Entities
+27. Add client schema and validation  
+28. Build client create / edit / archive flow  
+29. Enforce duplicate email block  
+30. Add item preset schema and CRUD  
+31. Add expense schema and CRUD  
+32. List screens for clients / items / expenses  
 
-Iteration J — PDFs
-	68.	build shared invoice render model
-	69.	create HTML invoice template
-	70.	add server-side render function
-	71.	add PDF generation endpoint/job
-	72.	store generated PDF metadata
-	73.	generate on send
-	74.	add preview generation
-	75.	add 5-minute cache
-	76.	restrict PDF download when paid/void per spec
+---
 
-Iteration K — Files and quotas
-	77.	create file metadata schema
-	78.	add upload validation
-	79.	add attachment count limit
-	80.	add attachment size/type limit
-	81.	add org logo upload
-	82.	add invoice attachments
-	83.	add line item image refs
-	84.	add storage quota accounting
-	85.	block uploads over tier quota
-	86.	implement delete cleanup and quota decrement
+### Iteration F — Invoice Draft Core
+33. Add invoice schema  
+34. Add line item substructure  
+35. Add expense snapshot structure  
+36. Implement money helpers  
+37. Implement line-level rounding  
+38. Implement discount math  
+39. Implement tax-before-total order correctly  
+40. Create draft invoice mutation  
+41. Create invoice edit mutation  
+42. Create invoice preview query  
 
-Iteration L — Emails
-	87.	create email templates
-	88.	send invoice email on send
-	89.	send payment receipt on pay
-	90.	create reminder job model
-	91.	schedule reminder jobs
-	92.	suppress reminders when paid
-	93.	add resend flow
-	94.	add org email hourly limit
-	95.	log email failures
+---
 
-Iteration M — Team management
-	96.	add invitation schema
-	97.	validate invited email belongs to existing user
-	98.	add create invite mutation
-	99.	add revoke mutation
-	100.	add 24-hour expiry enforcement
-	101.	build invite accept page
-	102.	create membership on accept
-	103.	deep link to mobile app
-	104.	add role change flow
-	105.	add remove member flow
-	106.	enforce admin/owner continuity rules
-	107.	add leave org flow
-	108.	add owner-leave delete flow
+### Iteration G — Invoice Composer UI
+43. Create draft invoice screen shell  
+44. Add client selector  
+45. Add line item editor  
+46. Add expense attach flow  
+47. Add discount input  
+48. Add totals summary  
+49. Save and reload draft state  
+50. List drafts grouped by status  
 
-Iteration N — Subscription and downgrade
-	109.	integrate Stripe Billing for account subscriptions
-	110.	sync tier from Stripe webhooks
-	111.	update org limit enforcement from live tier
-	112.	update storage quota enforcement from live tier
-	113.	implement downgrade detection
-	114.	add org selection for deletion
-	115.	mark excess orgs read-only
-	116.	add 7-day grace scheduler
-	117.	auto-delete after grace
-	118.	cancel pending deletion on upgrade
+---
 
-Iteration O — Admin and operations
-	119.	add log schema and helper
-	120.	log core event types
-	121.	build admin auth boundary
-	122.	user search
-	123.	invoice search
-	124.	log filtering UI
-	125.	refund trigger
-	126.	impersonation with audit logging
-	127.	user deletion
-	128.	add 30-day log retention cleanup
+### Iteration H — Send Flow and Public Viewer
+51. Add send invoice validation  
+52. Generate invoice token  
+53. Generate public URL  
+54. Mark status sent  
+55. Create public invoice fetch route  
+56. Validate token / subdomain / invoice match  
+57. Add first-view tracking  
+58. Mark invoice viewed on first load  
+59. Render public invoice states  
 
-Iteration P — Export, deletion, polish
-	129.	JSON export assembler
-	130.	export trigger/download flow
-	131.	org delete confirmation by name
-	132.	hard delete org data/files/refs
-	133.	dashboard aggregates
-	134.	unpaid widgets
-	135.	recent invoice list
-	136.	theme support
-	137.	biometric unlock
-	138.	regression testing and production checklist
+---
 
-⸻
+### Iteration I — Payments
+60. Create checkout session mutation  
+61. Attach Stripe metadata  
+62. Add payment success page  
+63. Implement webhook signature verification  
+64. Mark invoice paid on successful webhook  
+65. Save payment refs  
+66. Add manual mark-paid flow  
+67. Add payment attempt limit and lock  
 
-6. Third-Pass Breakdown Into Right-Sized Implementation Steps
+---
+
+### Iteration J — PDFs
+68. Build shared invoice render model  
+69. Create HTML invoice template  
+70. Add server-side render function  
+71. Add PDF generation endpoint / job  
+72. Store generated PDF metadata  
+73. Generate on send  
+74. Add preview generation  
+75. Add 5-minute cache  
+76. Restrict PDF download when paid / void per spec  
+
+---
+
+### Iteration K — Files and Quotas
+77. Create file metadata schema  
+78. Add upload validation  
+79. Add attachment count limit  
+80. Add attachment size / type limit  
+81. Add org logo upload  
+82. Add invoice attachments  
+83. Add line item image refs  
+84. Add storage quota accounting  
+85. Block uploads over tier quota  
+86. Implement delete cleanup and quota decrement  
+
+---
+
+### Iteration L — Emails
+87. Create email templates  
+88. Send invoice email on send  
+89. Send payment receipt on pay  
+90. Create reminder job model  
+91. Schedule reminder jobs  
+92. Suppress reminders when paid  
+93. Add resend flow  
+94. Add org email hourly limit  
+95. Log email failures  
+
+---
+
+### Iteration M — Team Management
+96. Add invitation schema  
+97. Validate invited email belongs to existing user  
+98. Add create invite mutation  
+99. Add revoke mutation  
+100. Add 24-hour expiry enforcement  
+101. Build invite accept page  
+102. Create membership on accept  
+103. Deep link to mobile app  
+104. Add role change flow  
+105. Add remove member flow  
+106. Enforce admin / owner continuity rules  
+107. Add leave org flow  
+108. Add owner-leave delete flow  
+
+---
+
+### Iteration N — Subscription and Downgrade
+109. Integrate Stripe Billing for account subscriptions  
+110. Sync tier from Stripe webhooks  
+111. Update org limit enforcement from live tier  
+112. Update storage quota enforcement from live tier  
+113. Implement downgrade detection  
+114. Add org selection for deletion  
+115. Mark excess orgs read-only  
+116. Add 7-day grace scheduler  
+117. Auto-delete after grace  
+118. Cancel pending deletion on upgrade  
+
+---
+
+### Iteration O — Admin and Operations
+119. Add log schema and helper  
+120. Log core event types  
+121. Build admin auth boundary  
+122. User search  
+123. Invoice search  
+124. Log filtering UI  
+125. Refund trigger  
+126. Impersonation with audit logging  
+127. User deletion  
+128. Add 30-day log retention cleanup  
+
+---
+
+### Iteration P — Export, Deletion, Polish
+129. JSON export assembler  
+130. Export trigger / download flow  
+131. Org delete confirmation by name  
+132. Hard delete org data / files / refs  
+133. Dashboard aggregates  
+134. Unpaid widgets  
+135. Recent invoice list  
+136. Theme support  
+137. Biometric unlock  
+138. Regression testing and production checklist  
+
+---
+
+## 6. Third-Pass Breakdown Into Right-Sized Implementation Steps
 
 This is the practical build queue. Each step is small enough for one focused implementation cycle, but large enough to create forward movement.
 
-Stage 1 — Repository and tooling
-	1.	initialize Turborepo and root scripts
-	2.	create app shells for mobile, invoice-viewer, marketing-site, admin-panel
-	3.	create ui, utils, types packages
-	4.	wire TypeScript path aliases and shared build config
-	5.	add lint, format, typecheck, test command scaffolding
-	6.	add CI pipeline for lint + typecheck + build
+---
 
-Stage 2 — Shared contracts
-	7.	define shared enums for tiers, roles, invoice status, log types
-	8.	define shared money, invoice, client, org DTO types
-	9.	create validation schemas for major entities
-	10.	create shared utility modules:
+### Stage 1 — Repository and Tooling
+1. Initialize Turborepo and root scripts  
+2. Create app shells for `mobile`, `invoice-viewer`, `marketing-site`, `admin-panel`  
+3. Create `ui`, `utils`, `types` packages  
+4. Wire TypeScript path aliases and shared build config  
+5. Add lint, format, typecheck, test command scaffolding  
+6. Add CI pipeline for lint + typecheck + build  
 
-	•	money conversion
-	•	invoice calculations
-	•	token generation
-	•	permission checks
+---
 
-Stage 3 — Auth bootstrap
-	11.	integrate Clerk in authenticated app shells
-	12.	create Convex user table
-	13.	create user bootstrap mutation/query path
-	14.	map Clerk user to internal user on first auth
-	15.	store default subscription tier and org count limit
-	16.	expose current authenticated user query
+### Stage 2 — Shared Contracts
+7. Define shared enums for tiers, roles, invoice status, log types  
+8. Define shared money, invoice, client, org DTO types  
+9. Create validation schemas for major entities  
+10. Create shared utility modules:
+   - money conversion  
+   - invoice calculations  
+   - token generation  
+   - permission checks  
 
-Stage 4 — Organization core
-	17.	create organization table/schema
-	18.	create membership table/schema
-	19.	build organization creation mutation
-	20.	generate immutable 12-char random subdomain
-	21.	ensure subdomain uniqueness before insert
-	22.	create owner membership automatically
-	23.	enforce tier-based org count cap
-	24.	build current organization selection/query logic
+---
 
-Stage 5 — Role enforcement
-	25.	implement backend permission guards per role
-	26.	create reusable role-check helpers for org actions
-	27.	write tests for owner/admin/member access boundaries
-	28.	apply guards to organization, client, and invoice mutations
+### Stage 3 — Auth Bootstrap
+11. Integrate Clerk in authenticated app shells  
+12. Create Convex user table  
+13. Create user bootstrap mutation / query path  
+14. Map Clerk user to internal user on first auth  
+15. Store default subscription tier and org count limit  
+16. Expose current authenticated user query  
 
-Stage 6 — Onboarding
-	29.	add org fields: business address, logo, storage used, tier
-	30.	create business information update flow
-	31.	create onboarding readiness query
-	32.	add placeholder Stripe connected field/state
-	33.	block invoice-send mutation when org incomplete
-	34.	build onboarding checklist UI in mobile app
+---
 
-Stage 7 — Client management
-	35.	create client schema
-	36.	add create client mutation with required email validation
-	37.	block duplicate client email within org
-	38.	add edit client mutation
-	39.	add archive and restore behavior
-	40.	build client list and edit screens
+### Stage 4 — Organization Core
+17. Create organization table / schema  
+18. Create membership table / schema  
+19. Build organization creation mutation  
+20. Generate immutable 12-char random subdomain  
+21. Ensure subdomain uniqueness before insert  
+22. Create owner membership automatically  
+23. Enforce tier-based org count cap  
+24. Build current organization selection / query logic  
 
-Stage 8 — Item presets
-	41.	create item preset schema at user level
-	42.	add create/edit/delete item preset mutations
-	43.	build item preset picker UI
-	44.	confirm deleting preset never mutates invoices
+---
 
-Stage 9 — Expenses
-	45.	create expense schema
-	46.	add expense CRUD mutations
-	47.	build expense list/create/edit screens
-	48.	add expense selection support for invoice drafts
+### Stage 5 — Role Enforcement
+25. Implement backend permission guards per role  
+26. Create reusable role-check helpers for org actions  
+27. Write tests for owner / admin / member access boundaries  
+28. Apply guards to organization, client, and invoice mutations  
 
-Stage 10 — Invoice math engine
-	49.	implement cents-based money helpers
-	50.	implement decimal quantity handling
-	51.	implement line-total rounding at item level
-	52.	implement discount ordering
-	53.	implement tax-after-discount calculation structure
-	54.	add test coverage for math edge cases
+---
 
-Stage 11 — Invoice schema
-	55.	create invoice table/schema
-	56.	store client snapshot
-	57.	store line item snapshots
-	58.	store expense snapshots
-	59.	store totals and invoice status
-	60.	add created/updated timestamps and edited flag
+### Stage 6 — Onboarding
+29. Add org fields: business address, logo, storage used, tier  
+30. Create business information update flow  
+31. Create onboarding readiness query  
+32. Add placeholder Stripe connected field / state  
+33. Block invoice-send mutation when org incomplete  
+34. Build onboarding checklist UI in mobile app  
 
-Stage 12 — Draft invoice backend
-	61.	add create draft invoice mutation
-	62.	add update draft invoice mutation
-	63.	add fetch invoice detail query
-	64.	add invoice list query grouped by status
-	65.	sort newest first within groups
+---
 
-Stage 13 — Draft composer UI
-	66.	build invoice draft screen scaffold
-	67.	add client picker
-	68.	add line item add/edit/remove flow
-	69.	add preset-to-line-item insertion
-	70.	add expense attach flow
-	71.	add discount editor
-	72.	add totals preview panel
-	73.	save draft changes and restore on reload
+### Stage 7 — Client Management
+35. Create client schema  
+36. Add create client mutation with required email validation  
+37. Block duplicate client email within org  
+38. Add edit client mutation  
+39. Add archive and restore behavior  
+40. Build client list and edit screens  
 
-Stage 14 — Invoice send transition
-	74.	add send validation rules
-	75.	generate 32-char hex access token
-	76.	generate public invoice URL from org subdomain + invoiceId + token
-	77.	transition invoice status to sent
-	78.	save sent timestamp and initial Stripe session placeholder
+---
 
-Stage 15 — Public invoice viewer foundation
-	79.	set up invoice-viewer routing for org subdomain and invoice route
-	80.	fetch invoice by subdomain + id + token
-	81.	reject invalid token or invoice mismatch
-	82.	render unpaid/paid/void state shells
-	83.	render line items, expenses, attachments placeholders
-	84.	record first view and update status to viewed
-	85.	append view log on each load
+### Stage 8 — Item Presets
+41. Create item preset schema at user level  
+42. Add create / edit / delete item preset mutations  
+43. Build item preset picker UI  
+44. Confirm deleting preset never mutates invoices  
 
-Stage 16 — Checkout integration
-	86.	create Stripe Checkout session mutation
-	87.	allow only sent/viewed unpaid invoices
-	88.	add supported payment methods
-	89.	attach invoice/org metadata for reconciliation
-	90.	redirect to marketing success page
-	91.	persist checkout session reference on invoice
+---
 
-Stage 17 — Payment reconciliation
-	92.	verify Stripe webhook signatures
-	93.	handle checkout success webhook
-	94.	mark invoice paid only once
-	95.	save payment metadata
-	96.	update public viewer banner to paid
-	97.	send receipt trigger event
+### Stage 9 — Expenses
+45. Create expense schema  
+46. Add expense CRUD mutations  
+47. Build expense list / create / edit screens  
+48. Add expense selection support for invoice drafts  
 
-Stage 18 — Manual payment flow
-	98.	add manual mark-paid mutation for authorized roles
-	99.	require payment method selection: cash/check/other
-	100.	store manual payment note/metadata
-	101.	update invoice status and logs
+---
 
-Stage 19 — Payment abuse protection
-	102.	create payment attempt rate-limit record model
-	103.	count attempts per invoice/token/IP strategy as chosen
-	104.	lock after 10 attempts per hour
-	105.	enforce 15-minute lock window
-	106.	show lock message in viewer
-	107.	log failed attempts
+### Stage 10 — Invoice Math Engine
+49. Implement cents-based money helpers  
+50. Implement decimal quantity handling  
+51. Implement line-total rounding at item level  
+52. Implement discount ordering  
+53. Implement tax-after-discount calculation structure  
+54. Add test coverage for math edge cases  
 
-Stage 20 — HTML/PDF rendering
-	108.	build shared invoice render component from normalized invoice data
-	109.	ensure same data shape serves viewer and PDF generator
-	110.	implement server-side HTML render
-	111.	implement PDF generation routine
-	112.	generate PDF on send
-	113.	generate preview on demand
-	114.	cache preview for 5 minutes
-	115.	store PDF file metadata and filename
+---
 
-Stage 21 — Attachments and branding
-	116.	create file upload metadata model
-	117.	validate mime types and size
-	118.	enforce max 2 attachments per invoice
-	119.	add org logo upload flow
-	120.	add invoice attachment upload flow
-	121.	render attachments in public invoice viewer
-	122.	render logo and line-item images in HTML/PDF
+### Stage 11 — Invoice Schema
+55. Create invoice table / schema  
+56. Store client snapshot  
+57. Store line item snapshots  
+58. Store expense snapshots  
+59. Store totals and invoice status  
+60. Add created / updated timestamps and edited flag  
 
-Stage 22 — Storage quota enforcement
-	123.	define quota per tier
-	124.	compute storage usage from file records
-	125.	increment usage on upload/store
-	126.	decrement usage on delete
-	127.	block over-quota uploads with clear error
-	128.	count PDFs, logos, item images, attachments toward usage
+---
 
-Stage 23 — Email delivery
-	129.	build invoice send email template
-	130.	build payment receipt email template
-	131.	send invoice email from send flow
-	132.	send payment receipt from payment confirmation flow
-	133.	add resend invoice email action in mobile app
+### Stage 12 — Draft Invoice Backend
+61. Add create draft invoice mutation  
+62. Add update draft invoice mutation  
+63. Add fetch invoice detail query  
+64. Add invoice list query grouped by status  
+65. Sort newest first within groups  
 
-Stage 24 — Reminder system
-	134.	add due date support if not already present in invoice model
-	135.	schedule 3-days-before reminder job
-	136.	schedule due-date reminder job
-	137.	suppress/cancel reminders if invoice paid or void
-	138.	log reminder attempts and failures
+---
 
-Stage 25 — Email rate limiting
-	139.	create org email limit model
-	140.	enforce 50 emails/hour per org
-	141.	return limit error with no auto retry
-	142.	log blocked sends
+### Stage 13 — Draft Composer UI
+66. Build invoice draft screen scaffold  
+67. Add client picker  
+68. Add line item add / edit / remove flow  
+69. Add preset-to-line-item insertion  
+70. Add expense attach flow  
+71. Add discount editor  
+72. Add totals preview panel  
+73. Save draft changes and restore on reload  
 
-Stage 26 — Invitations
-	143.	create invitation table/schema
-	144.	add create invitation mutation
-	145.	validate invited email belongs to existing user
-	146.	add revoke invitation mutation
-	147.	enforce 24-hour expiration at accept time
-	148.	build invite acceptance page on web
-	149.	require Clerk auth on accept
-	150.	create membership and consume invite
-	151.	deep link to mobile app after acceptance
+---
 
-Stage 27 — Membership management
-	152.	build members list UI
-	153.	add role change action
-	154.	add remove member action
-	155.	block owner removal
-	156.	enforce at least one admin/owner remains
-	157.	add leave organization flow
-	158.	make owner-leave route go through org deletion confirmation
+### Stage 14 — Invoice Send Transition
+74. Add send validation rules  
+75. Generate 32-char hex access token  
+76. Generate public invoice URL from org subdomain + invoiceId + token  
+77. Transition invoice status to sent  
+78. Save sent timestamp and initial Stripe session placeholder  
 
-Stage 28 — Subscription billing
-	159.	create Stripe Billing products/prices
-	160.	integrate account subscription checkout/portal
-	161.	sync active tier to user record via webhook
-	162.	update org count limit from active tier
-	163.	update storage quota from active tier
+---
 
-Stage 29 — Downgrade grace flow
-	164.	detect over-limit state after downgrade
-	165.	prompt user to choose orgs to keep/delete
-	166.	mark excess orgs read-only
-	167.	schedule 7-day grace expiration
-	168.	auto-delete excess orgs after grace
-	169.	cancel scheduled deletion if upgraded during grace
+### Stage 15 — Public Invoice Viewer Foundation
+79. Set up `invoice-viewer` routing for org subdomain and invoice route  
+80. Fetch invoice by subdomain + id + token  
+81. Reject invalid token or invoice mismatch  
+82. Render unpaid / paid / void state shells  
+83. Render line items, expenses, attachments placeholders  
+84. Record first view and update status to viewed  
+85. Append view log on each load  
 
-Stage 30 — Dashboard
-	170.	add unpaid total aggregate query
-	171.	add unpaid invoice count query
-	172.	add recent invoices query limited to 5
-	173.	build quick actions for create invoice and add client
+---
 
-Stage 31 — Export and destructive actions
-	174.	assemble org JSON export payload
-	175.	create export request/download flow
-	176.	build org deletion confirmation requiring typed org name
-	177.	hard delete invoices, clients, expenses, memberships, files
-	178.	remove storage artifacts and Stripe refs
-	179.	write deletion log
+### Stage 16 — Checkout Integration
+86. Create Stripe Checkout session mutation  
+87. Allow only sent / viewed unpaid invoices  
+88. Add supported payment methods  
+89. Attach invoice / org metadata for reconciliation  
+90. Redirect to marketing success page  
+91. Persist checkout session reference on invoice  
 
-Stage 32 — Logging and admin panel
-	180.	create centralized log helper
-	181.	write logs for payments, email, auth, invoice changes, membership changes
-	182.	build admin auth boundary
-	183.	add user search
-	184.	add invoice search
-	185.	add log filtering by event type
-	186.	add refund trigger flow
-	187.	add impersonation with audit log
-	188.	add delete-user action
-	189.	add 30-day log cleanup job
+---
 
-Stage 33 — Themes and mobile security
-	190.	add mobile dark/light mode support
-	191.	add viewer system theme detection
-	192.	add biometric unlock
-	193.	verify persistent login behavior and logout rules
+### Stage 17 — Payment Reconciliation
+92. Verify Stripe webhook signatures  
+93. Handle checkout success webhook  
+94. Mark invoice paid only once  
+95. Save payment metadata  
+96. Update public viewer banner to paid  
+97. Send receipt trigger event  
 
-Stage 34 — Final hardening
-	194.	write end-to-end tests for core invoice flow
-	195.	write access-control regression tests
-	196.	test all rate-limit paths
-	197.	test file quota boundaries
-	198.	test downgrade grace and auto-delete
-	199.	test public invoice security with invalid tokens/subdomains
-	200.	prepare production release checklist
+---
 
-⸻
+### Stage 18 — Manual Payment Flow
+98. Add manual mark-paid mutation for authorized roles  
+99. Require payment method selection: `cash` / `check` / `other`  
+100. Store manual payment note / metadata  
+101. Update invoice status and logs  
 
-7. Final Recommended Build Order for Real Execution
+---
+
+### Stage 19 — Payment Abuse Protection
+102. Create payment attempt rate-limit record model  
+103. Count attempts per invoice / token / IP strategy as chosen  
+104. Lock after 10 attempts per hour  
+105. Enforce 15-minute lock window  
+106. Show lock message in viewer  
+107. Log failed attempts  
+
+---
+
+### Stage 20 — HTML / PDF Rendering
+108. Build shared invoice render component from normalized invoice data  
+109. Ensure same data shape serves viewer and PDF generator  
+110. Implement server-side HTML render  
+111. Implement PDF generation routine  
+112. Generate PDF on send  
+113. Generate preview on demand  
+114. Cache preview for 5 minutes  
+115. Store PDF file metadata and filename  
+
+---
+
+### Stage 21 — Attachments and Branding
+116. Create file upload metadata model  
+117. Validate mime types and size  
+118. Enforce max 2 attachments per invoice  
+119. Add org logo upload flow  
+120. Add invoice attachment upload flow  
+121. Render attachments in public invoice viewer  
+122. Render logo and line-item images in HTML / PDF  
+
+---
+
+### Stage 22 — Storage Quota Enforcement
+123. Define quota per tier  
+124. Compute storage usage from file records  
+125. Increment usage on upload / store  
+126. Decrement usage on delete  
+127. Block over-quota uploads with clear error  
+128. Count PDFs, logos, item images, attachments toward usage  
+
+---
+
+### Stage 23 — Email Delivery
+129. Build invoice send email template  
+130. Build payment receipt email template  
+131. Send invoice email from send flow  
+132. Send payment receipt from payment confirmation flow  
+133. Add resend invoice email action in mobile app  
+
+---
+
+### Stage 24 — Reminder System
+134. Add due date support if not already present in invoice model  
+135. Schedule 3-days-before reminder job  
+136. Schedule due-date reminder job  
+137. Suppress / cancel reminders if invoice paid or void  
+138. Log reminder attempts and failures  
+
+---
+
+### Stage 25 — Email Rate Limiting
+139. Create org email limit model  
+140. Enforce 50 emails / hour per org  
+141. Return limit error with no auto retry  
+142. Log blocked sends  
+
+---
+
+### Stage 26 — Invitations
+143. Create invitation table / schema  
+144. Add create invitation mutation  
+145. Validate invited email belongs to existing user  
+146. Add revoke invitation mutation  
+147. Enforce 24-hour expiration at accept time  
+148. Build invite acceptance page on web  
+149. Require Clerk auth on accept  
+150. Create membership and consume invite  
+151. Deep link to mobile app after acceptance  
+
+---
+
+### Stage 27 — Membership Management
+152. Build members list UI  
+153. Add role change action  
+154. Add remove member action  
+155. Block owner removal  
+156. Enforce at least one admin / owner remains  
+157. Add leave organization flow  
+158. Make owner-leave route go through org deletion confirmation  
+
+---
+
+### Stage 28 — Subscription Billing
+159. Create Stripe Billing products / prices  
+160. Integrate account subscription checkout / portal  
+161. Sync active tier to user record via webhook  
+162. Update org count limit from active tier  
+163. Update storage quota from active tier  
+
+---
+
+### Stage 29 — Downgrade Grace Flow
+164. Detect over-limit state after downgrade  
+165. Prompt user to choose orgs to keep / delete  
+166. Mark excess orgs read-only  
+167. Schedule 7-day grace expiration  
+168. Auto-delete excess orgs after grace  
+169. Cancel scheduled deletion if upgraded during grace  
+
+---
+
+### Stage 30 — Dashboard
+170. Add unpaid total aggregate query  
+171. Add unpaid invoice count query  
+172. Add recent invoices query limited to 5  
+173. Build quick actions for create invoice and add client  
+
+---
+
+### Stage 31 — Export and Destructive Actions
+174. Assemble org JSON export payload  
+175. Create export request / download flow  
+176. Build org deletion confirmation requiring typed org name  
+177. Hard delete invoices, clients, expenses, memberships, files  
+178. Remove storage artifacts and Stripe refs  
+179. Write deletion log  
+
+---
+
+### Stage 32 — Logging and Admin Panel
+180. Create centralized log helper  
+181. Write logs for payments, email, auth, invoice changes, membership changes  
+182. Build admin auth boundary  
+183. Add user search  
+184. Add invoice search  
+185. Add log filtering by event type  
+186. Add refund trigger flow  
+187. Add impersonation with audit log  
+188. Add delete-user action  
+189. Add 30-day log cleanup job  
+
+---
+
+### Stage 33 — Themes and Mobile Security
+190. Add mobile dark / light mode support  
+191. Add viewer system theme detection  
+192. Add biometric unlock  
+193. Verify persistent login behavior and logout rules  
+
+---
+
+### Stage 34 — Final Hardening
+194. Write end-to-end tests for core invoice flow  
+195. Write access-control regression tests  
+196. Test all rate-limit paths  
+197. Test file quota boundaries  
+198. Test downgrade grace and auto-delete  
+199. Test public invoice security with invalid tokens / subdomains  
+200. Prepare production release checklist  
+
+---
+
+## 7. Final Recommended Build Order for Real Execution
 
 This is the order that minimizes rework and keeps vertical slices working.
 
-Milestone 1 — Working authenticated skeleton
+### Milestone 1 — Working Authenticated Skeleton
+**Steps 1–28**
 
-Steps 1–28
+**Outcome:**
+- Apps boot  
+- Auth works  
+- Orgs and memberships exist  
+- Onboarding gate exists  
 
-Outcome:
-	•	apps boot
-	•	auth works
-	•	orgs and memberships exist
-	•	onboarding gate exists
+---
 
-Milestone 2 — Core business data
+### Milestone 2 — Core Business Data
+**Steps 29–48**
 
-Steps 29–48
+**Outcome:**
+- Clients, items, expenses ready  
+- Invoice math engine stable  
 
-Outcome:
-	•	clients, items, expenses ready
-	•	invoice math engine stable
+---
 
-Milestone 3 — Draft invoicing
+### Milestone 3 — Draft Invoicing
+**Steps 49–73**
 
-Steps 49–73
+**Outcome:**
+- Draft invoices can be created and edited from mobile  
 
-Outcome:
-	•	draft invoices can be created and edited from mobile
+---
 
-Milestone 4 — Send and public invoice
+### Milestone 4 — Send and Public Invoice
+**Steps 74–85**
 
-Steps 74–85
+**Outcome:**
+- Invoices can be sent and viewed publicly  
 
-Outcome:
-	•	invoices can be sent and viewed publicly
+---
 
-Milestone 5 — Payments
+### Milestone 5 — Payments
+**Steps 86–107**
 
-Steps 86–107
+**Outcome:**
+- Invoices can be paid online or marked paid manually  
+- Abuse controls exist  
 
-Outcome:
-	•	invoices can be paid online or marked paid manually
-	•	abuse controls exist
+---
 
-Milestone 6 — PDFs and files
+### Milestone 6 — PDFs and Files
+**Steps 108–128**
 
-Steps 108–128
+**Outcome:**
+- PDFs generate  
+- Uploads work  
+- Quotas enforced  
 
-Outcome:
-	•	PDFs generate
-	•	uploads work
-	•	quotas enforced
+---
 
-Milestone 7 — Email and reminders
+### Milestone 7 — Email and Reminders
+**Steps 129–142**
 
-Steps 129–142
+**Outcome:**
+- Send emails, receipts, reminders, resend flow  
 
-Outcome:
-	•	send emails, receipts, reminders, resend flow
+---
 
-Milestone 8 — Team features
+### Milestone 8 — Team Features
+**Steps 143–158**
 
-Steps 143–158
+**Outcome:**
+- Invitations and team management complete  
 
-Outcome:
-	•	invitations and team management complete
+---
 
-Milestone 9 — Billing enforcement
+### Milestone 9 — Billing Enforcement
+**Steps 159–169**
 
-Steps 159–169
+**Outcome:**
+- Paid tiers, limits, downgrade grace fully active  
 
-Outcome:
-	•	paid tiers, limits, downgrade grace fully active
+---
 
-Milestone 10 — Operations and finish
+### Milestone 10 — Operations and Finish
+**Steps 170–200**
 
-Steps 170–200
+**Outcome:**
+- Dashboard, exports, deletion, admin panel, themes, security, release readiness  
 
-Outcome:
-	•	dashboard, exports, deletion, admin panel, themes, security, release readiness
+---
 
-⸻
+## 8. Risk Areas That Need Early Discipline
 
-8. Risk Areas That Need Early Discipline
+### Invoice Mutability
+Do not let sent / paid invoices behave like drafts. Define edit policy early.
 
-Invoice mutability
-
-Do not let sent/paid invoices behave like drafts. Define edit policy early.
-
-Stripe ownership model ambiguity
-
+### Stripe Ownership Model Ambiguity
 Your spec mentions Stripe Connect setup and also Stripe Checkout for invoice payments. Decide early whether:
-	•	platform collects payments, or
-	•	each org receives payments directly through connected accounts
+
+- Platform collects payments, or  
+- Each org receives payments directly through connected accounts  
 
 This affects onboarding, checkout, refunds, tax, and payout responsibility.
 
-Public subdomain routing
+### Public Subdomain Routing
+Multi-subdomain app routing needs early validation in hosting / deployment. Do not wait until late stage.
 
-Multi-subdomain app routing needs early validation in hosting/deployment. Do not wait until late stage.
-
-PDF generation environment
-
+### PDF Generation Environment
 Server-side HTML-to-PDF must be tested in actual deployment environment early.
 
-File storage quota accounting
-
+### File Storage Quota Accounting
 Do not compute storage usage only from cached counters without reconciliation tooling. Add a periodic reconciliation path later if possible.
 
-Organization deletion during downgrade
-
+### Organization Deletion During Downgrade
 Auto-delete is destructive. Require clear scheduling and audit logs.
 
-Owner leave = org delete
-
+### Owner Leave = Org Delete
 This is dangerous behavior. Implement very explicit confirmation flow and logging.
 
-⸻
+---
 
-9. Definition of Done Per Major Area
+## 9. Definition of Done Per Major Area
 
-Organization system done when
-	•	user can create org within tier limit
-	•	owner membership created automatically
-	•	immutable subdomain assigned
-	•	readiness state computed correctly
+### Organization System
+**Done when:**
+- User can create org within tier limit  
+- Owner membership created automatically  
+- Immutable subdomain assigned  
+- Readiness state computed correctly  
 
-Invoice drafting done when
-	•	authorized users create/edit drafts
-	•	totals match expected calculations
-	•	grouped invoice list works
+---
 
-Invoice sending done when
-	•	only valid invoices can be sent
-	•	public token URL resolves invoice securely
-	•	first view changes status to viewed
+### Invoice Drafting
+**Done when:**
+- Authorized users create / edit drafts  
+- Totals match expected calculations  
+- Grouped invoice list works  
 
-Payments done when
-	•	checkout session created only for eligible invoices
-	•	successful payment marks invoice paid through webhook
-	•	duplicate webhooks do not double-process
+---
 
-PDFs done when
-	•	preview generates
-	•	send triggers stored PDF
-	•	PDF content matches public invoice content
+### Invoice Sending
+**Done when:**
+- Only valid invoices can be sent  
+- Public token URL resolves invoice securely  
+- First view changes status to viewed  
 
-Emails done when
-	•	send email, receipt, and reminders work
-	•	rate limit enforced
-	•	no reminders after paid
+---
 
-Memberships done when
-	•	invite, accept, revoke, role change, remove, leave all work
-	•	continuity rules enforced
+### Payments
+**Done when:**
+- Checkout session created only for eligible invoices  
+- Successful payment marks invoice paid through webhook  
+- Duplicate webhooks do not double-process  
 
-Billing done when
-	•	user tier syncs from Stripe
-	•	org limits and storage quotas reflect tier
-	•	downgrade grace state behaves exactly as specified
+---
 
-Admin done when
-	•	support can search, inspect logs, refund, impersonate
-	•	invoice editing remains disabled
+### PDFs
+**Done when:**
+- Preview generates  
+- Send triggers stored PDF  
+- PDF content matches public invoice content  
 
-⸻
+---
 
-10. Best First Sprint
+### Emails
+**Done when:**
+- Send email, receipt, and reminders work  
+- Rate limit enforced  
+- No reminders after paid  
+
+---
+
+### Memberships
+**Done when:**
+- Invite, accept, revoke, role change, remove, leave all work  
+- Continuity rules enforced  
+
+---
+
+### Billing
+**Done when:**
+- User tier syncs from Stripe  
+- Org limits and storage quotas reflect tier  
+- Downgrade grace state behaves exactly as specified  
+
+---
+
+### Admin
+**Done when:**
+- Support can search, inspect logs, refund, impersonate  
+- Invoice editing remains disabled  
+
+---
+
+## 10. Best First Sprint
 
 Start here:
-	1.	steps 1–6 repo/tooling
-	2.	steps 7–10 shared contracts
-	3.	steps 11–16 auth bootstrap
-	4.	steps 17–24 organization core
-	5.	steps 25–28 role enforcement
-	6.	steps 29–34 onboarding
 
-That creates a stable foundation before invoice complexity begins.
+1. Steps 1–6 → repo / tooling  
+2. Steps 7–10 → shared contracts  
+3. Steps 11–16 → auth bootstrap  
+4. Steps 17–24 → organization core  
+5. Steps 25–28 → role enforcement  
+6. Steps 29–34 → onboarding  
 
-11. Best Second Sprint
-	1.	steps 35–48 clients/items/expenses/math
-	2.	steps 55–73 invoice schema + draft backend + draft UI
+**Outcome:**
+- Stable foundation before invoice complexity  
 
-That gives a usable internal MVP with draft creation.
+---
 
-12. Best Third Sprint
-	1.	steps 74–97 send flow + public viewer + Stripe payment
-	2.	steps 108–115 PDF generation
+## 11. Best Second Sprint
 
-That gives the first real customer-facing slice.
+1. Steps 35–48 → clients / items / expenses / math  
+2. Steps 55–73 → invoice schema + draft backend + draft UI  
 
-13. Best Fourth Sprint
-	1.	steps 116–142 files + quotas + email + reminders
-	2.	steps 143–158 invitations and membership management
+**Outcome:**
+- Usable internal MVP with draft creation  
 
-That moves from MVP into operational product.
+---
 
-14. Best Fifth Sprint
-	1.	steps 159–200 billing enforcement, exports, admin, hardening
+## 12. Best Third Sprint
 
-That finishes commercialization and support tooling.
+1. Steps 74–97 → send flow + public viewer + Stripe payment  
+2. Steps 108–115 → PDF generation  
+
+**Outcome:**
+- First customer-facing slice  
+
+---
+
+## 13. Best Fourth Sprint
+
+1. Steps 116–142 → files + quotas + email + reminders  
+2. Steps 143–158 → invitations + membership management  
+
+**Outcome:**
+- Transition from MVP to operational product  
+
+---
+
+## 14. Best Fifth Sprint
+
+1. Steps 159–200 → billing enforcement, exports, admin, hardening  
+
+**Outcome:**
+- Commercialization and support tooling complete  

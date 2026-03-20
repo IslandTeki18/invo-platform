@@ -754,7 +754,7 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 17. Public invoice viewer
 
 ### 17.1 Routing (within marketing app)
-- [ ] Add `/invoice/:invoiceId` route to marketing app router
+- [ ] Add `/invoice/:invoiceId` route to marketing app router (react router)
 - [ ] Read `token` from query string
 - [ ] Resolve invoice by invoiceId + token
 
