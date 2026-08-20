@@ -797,31 +797,31 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 18. Payments via Stripe Checkout
 
 ### 18.1 Checkout creation
-- [ ] Create checkout session mutation
-- [ ] Allow only for sent/viewed unpaid invoices
-- [ ] Include invoice metadata in session
-- [ ] Include organization metadata in session
-- [ ] Configure card support
-- [ ] Configure Apple Pay support
-- [ ] Configure Google Pay support
-- [ ] Configure tax input path
+- [x] Create checkout session action
+- [x] Allow only for sent/viewed unpaid invoices
+- [x] Include invoice metadata in session
+- [x] Include organization metadata in session
+- [x] Configure card support
+- [x] Configure Apple Pay support — via Checkout `card`; requires Stripe Dashboard domain registration
+- [x] Configure Google Pay support — via Checkout `card`
+- [x] Configure tax input path — tax is folded into the charged invoice total (decision 004c)
 
 ### 18.2 Success handling
-- [ ] Redirect to marketing site success page
-- [ ] Build payment success page UI
-- [ ] Display payment received state
+- [x] Redirect to marketing site success page
+- [x] Build payment success page UI
+- [x] Display payment received state
 
 ### 18.3 Webhook reconciliation
-- [ ] Verify Stripe webhook signatures
-- [ ] Handle checkout success event
-- [ ] Mark invoice paid on verified payment
-- [ ] Prevent double-processing and idempotency issues
-- [ ] Save Stripe session/payment refs
-- [ ] Log payment success
+- [x] Verify Stripe webhook signatures
+- [x] Handle checkout success event
+- [x] Mark invoice paid on verified payment
+- [x] Prevent double-processing and idempotency issues
+- [x] Save Stripe session/payment refs
+- [x] Log payment success
 
 ### 18.4 Failure handling
-- [ ] Log failed payment attempts
-- [ ] Surface retry path on public viewer
+- [x] Log failed payment attempts — expired sessions logged; per-IP attempts and lockout remain in section 20
+- [x] Surface retry path on public viewer
 
 ---
 
