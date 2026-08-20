@@ -8,6 +8,8 @@ import {
   calculateInvoiceTotal,
   calculateLineItemTotal,
   calculateSubtotal,
+  canAcceptPayment,
+  accessTokenSchema,
   canSendInvoice,
   generateAccessTokenWeb,
   isReadyToSendInvoice,
@@ -176,6 +178,21 @@ async function resolveExpenseSnapshots(
   return snapshots;
 }
 
+async function resolvePublicInvoice(
+  ctx: { db: DatabaseReader },
+  invoiceId: Id<"invoices">,
+  token: string,
+): Promise<Doc<"invoices"> | null> {
+  if (!accessTokenSchema.safeParse(token).success) return null;
+
+  const invoice = await ctx.db.get(invoiceId);
+  if (!invoice || invoice.status === InvoiceStatus.DRAFT || invoice.accessToken !== token) {
+    return null;
+  }
+
+  return invoice;
+}
+
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
@@ -196,6 +213,70 @@ export const get = query({
     await requireOrgMember(ctx, invoice.orgId);
 
     return invoice;
+  },
+});
+
+export const getPublic = query({
+  args: {
+    invoiceId: v.id("invoices"),
+    token: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const invoice = await resolvePublicInvoice(ctx, args.invoiceId, args.token);
+    if (!invoice) return null;
+
+    const org = await ctx.db.get(invoice.orgId);
+    if (!org) return null;
+
+    const attachmentRows = await ctx.db
+      .query("attachments")
+      .withIndex("by_invoiceId", (q) => q.eq("invoiceId", args.invoiceId))
+      .collect();
+    const files = await Promise.all(
+      attachmentRows.map(async (attachment) => {
+        const file = await ctx.db.get(attachment.fileId);
+        if (!file) return null;
+        return {
+          displayName: attachment.displayName,
+          mimeType: file.mimeType,
+          ownerEntityType: file.ownerEntityType,
+          logicalPath: file.logicalPath,
+          url: await ctx.storage.getUrl(file.storageId as Id<"_storage">),
+        };
+      }),
+    );
+    const availableFiles = files.filter(
+      (file): file is NonNullable<typeof file> & { url: string } => file?.url != null,
+    );
+    const pdf = availableFiles.find(
+      (file) =>
+        file.ownerEntityType === "invoice" &&
+        file.mimeType === "application/pdf" && file.logicalPath?.endsWith("/invoice.pdf"),
+    );
+
+    return {
+      status: invoice.status,
+      sentAt: invoice.sentAt,
+      paidAt: invoice.paidAt,
+      voidedAt: invoice.voidedAt,
+      dueDate: invoice.dueDate,
+      clientSnapshot: invoice.clientSnapshot,
+      lineItems: invoice.lineItems,
+      expenses: invoice.expenses,
+      subtotal: invoice.subtotal,
+      discount: invoice.discount,
+      tax: invoice.tax,
+      total: invoice.total,
+      org: {
+        name: org.name,
+        businessAddress: org.businessAddress,
+        logoUrl: org.logoUrl,
+      },
+      attachments: availableFiles
+        .filter((file) => file !== pdf)
+        .map(({ displayName, mimeType, url }) => ({ displayName, mimeType, url })),
+      pdfUrl: canAcceptPayment(invoice.status) ? (pdf?.url ?? null) : null,
+    };
   },
 });
 
@@ -282,6 +363,38 @@ export const getDashboardSummary = query({
 // ---------------------------------------------------------------------------
 // Mutations
 // ---------------------------------------------------------------------------
+
+export const recordView = mutation({
+  args: {
+    invoiceId: v.id("invoices"),
+    token: v.string(),
+    userAgent: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const invoice = await resolvePublicInvoice(ctx, args.invoiceId, args.token);
+    if (!invoice) throw new ConvexError({ code: "NOT_FOUND" });
+
+    const now = Date.now();
+    const isFirstView = invoice.status === InvoiceStatus.SENT;
+    await ctx.db.insert("invoiceViewEvents", {
+      invoiceId: args.invoiceId,
+      timestamp: now,
+      userAgent: args.userAgent,
+      isFirstView,
+    });
+
+    if (isFirstView && isValidStatusTransition(invoice.status, InvoiceStatus.VIEWED)) {
+      await ctx.db.patch(args.invoiceId, { status: InvoiceStatus.VIEWED, updatedAt: now });
+      await ctx.db.insert("logs", {
+        eventType: LogEventType.INVOICE_VIEWED,
+        orgId: invoice.orgId as string,
+        entityType: "invoice",
+        entityId: args.invoiceId as string,
+        createdAt: now,
+      });
+    }
+  },
+});
 
 export const create = mutation({
   args: {
