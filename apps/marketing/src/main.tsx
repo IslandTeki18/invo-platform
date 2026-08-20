@@ -7,9 +7,9 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
 import InvoicePage from "./pages/InvoicePage.tsx";
+import PaymentSuccessPage from "./pages/PaymentSuccessPage.tsx";
 
-const CLERK_PUBLISHABLE_KEY = import.meta.env
-  .VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string | undefined;
 
 if (!CLERK_PUBLISHABLE_KEY) {
@@ -23,6 +23,7 @@ const convex = new ConvexReactClient(CONVEX_URL);
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
   { path: "/invoice/:invoiceId", element: <InvoicePage /> },
+  { path: "/invoice/:invoiceId/paid", element: <PaymentSuccessPage /> },
 ]);
 
 createRoot(document.getElementById("root")!).render(

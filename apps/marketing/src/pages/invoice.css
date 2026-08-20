@@ -11,6 +11,18 @@
   box-sizing: border-box;
 }
 
+.payment-page {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  padding: 32px 24px;
+  text-align: center;
+  box-sizing: border-box;
+}
+
+.payment-page a {
+  color: var(--accent);
+}
+
 .invoice-page section {
   margin-top: 40px;
 }
