@@ -3,8 +3,10 @@ import { createRoot } from "react-dom/client";
 import { ClerkProvider, useAuth } from "@clerk/clerk-react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { ConvexReactClient } from "convex/react";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
 import App from "./App.tsx";
+import InvoicePage from "./pages/InvoicePage.tsx";
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env
   .VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
@@ -18,12 +20,16 @@ if (!CONVEX_URL) {
 }
 
 const convex = new ConvexReactClient(CONVEX_URL);
+const router = createBrowserRouter([
+  { path: "/", element: <App /> },
+  { path: "/invoice/:invoiceId", element: <InvoicePage /> },
+]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <ClerkProvider publishableKey={CLERK_PUBLISHABLE_KEY}>
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <App />
+        <RouterProvider router={router} />
       </ConvexProviderWithClerk>
     </ClerkProvider>
   </StrictMode>,
