@@ -11,7 +11,8 @@
   "dependencies": {
     "@react-pdf/renderer": "^4.3.2",
     "convex": "^1.33.1",
-    "resend": "^6.9.4"
+    "resend": "^6.9.4",
+    "stripe": "^22.5.0"
   },
   "devDependencies": {
     "@repo/types": "workspace:*",
