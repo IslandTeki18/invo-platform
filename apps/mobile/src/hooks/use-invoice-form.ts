@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useReducer, useRef } from "react";
 import { useMutation } from "convex/react";
+import { randomUUID } from "expo-crypto";
 import { useRouter } from "expo-router";
 import { api } from "@repo/backend/convex/_generated/api";
 import type { Id } from "@repo/backend/convex/_generated/dataModel";
@@ -96,7 +97,7 @@ export type UseInvoiceFormOptions = {
 
 function createEmptyLineItem(): DraftLineItem {
   return {
-    localId: crypto.randomUUID(),
+    localId: randomUUID(),
     name: "",
     description: "",
     quantity: "1",
@@ -176,7 +177,7 @@ function reducer(state: DraftFormState, action: Action): DraftFormState {
         lineItems: [
           ...state.lineItems,
           {
-            localId: crypto.randomUUID(),
+            localId: randomUUID(),
             name: action.preset.name,
             description: action.preset.description ?? "",
             quantity: "1",
@@ -226,7 +227,7 @@ function reducer(state: DraftFormState, action: Action): DraftFormState {
         clientName: inv.clientSnapshot?.name ?? null,
         clientEmail: inv.clientSnapshot?.email ?? null,
         lineItems: inv.lineItems.map((item) => ({
-          localId: crypto.randomUUID(),
+          localId: randomUUID(),
           name: item.name,
           description: item.description ?? "",
           quantity: String(item.quantity),

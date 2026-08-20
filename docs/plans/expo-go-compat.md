@@ -136,3 +136,40 @@ Deviations from the plan, all required to reach the acceptance criteria:
 
 Results: `expo-doctor` 20/20, `expo install --check` clean, single `react` copy, iOS and Android
 `expo export` succeed. V4 (device run in Expo Go) not performed from this environment.
+
+## Follow-up: SDK 54 downgrade (2026-08-20)
+
+The App Store's latest Expo Go is 54.0.2 (SDK 54, released 2025-09-23). No Expo Go build exists
+for SDK 55+ on physical iPhones, so the project was moved to SDK 54 (user chose this over a dev build).
+
+- `npx expo install expo@^54` + `--fix`: RN 0.81.5, React 19.1.9, reanimated 4.1.7, worklets 0.5.1,
+  all `expo-*` to SDK 54 ranges. `expo-auth-session` pinned explicitly so Clerk's transitive copy
+  matches the SDK.
+- `apps/admin`, `apps/marketing`: React `^19.2.4` -> `~19.1.9`. Required because the single hoisted
+  `@clerk/clerk-react` otherwise carried a nested React 19.2.4 that the mobile bundle would load
+  alongside 19.1.9. Web apps typecheck clean on 19.1.
+- SDK 54 API differences fixed in mobile source:
+  - `NativeTabs.Trigger.Label/Icon` -> `Label`/`Icon` imports; `renderingMode` prop removed (`(tabs)/_layout.tsx`).
+  - `SymbolView name` takes a string, not a per-platform object (`collapsible.tsx`).
+  - `useColorScheme` returns `null`/`undefined`, not `'unspecified'` (`use-theme.ts`).
+  - `StyleSheet.absoluteFillObject` kept (removed only in RN 0.86).
+- `app.json` plugins: removed `expo-image` and `expo-status-bar` entries that `expo install --fix`
+  added; those packages have no config plugin in SDK 54.
+- `apps/mobile/metro.config.js` deleted: `convex/` moved to `packages/backend` (separate change),
+  which Expo already watches via `packages/*`.
+
+Remaining `expo-doctor` warning: duplicate React 19.2.4 under `@react-pdf/*`. Those are
+`packages/backend` (Convex action) dependencies and are never bundled into the mobile app.
+
+### Runtime fixes after first successful load in Expo Go 54
+
+- `@react-navigation/native` must be >= 7.3.17 to match the `native-stack` that `expo-router` 6
+  resolves (`createScreenFactory`). Expo's specifiers (`^7.1.8`, `^7.4.0`) are kept; pnpm resolves
+  the carets to current versions.
+- RN 0.81's renderer is pinned to React 19.1.0 exactly. Root `pnpm.overrides` forces `react` and
+  `react-dom` to 19.1.0 repo-wide; without it Clerk's peer range (`~19.1.4`) made pnpm nest a second
+  React. All three apps pin 19.1.0. Clerk logs a peer warning only.
+- Hermes on RN 0.81 has no global `crypto`; `use-invoice-form.ts` uses `randomUUID` from
+  `expo-crypto` (added as a direct dependency).
+
+Verified on device: app loads in Expo Go 54.0.2 via `npx expo start --clear --tunnel`.
