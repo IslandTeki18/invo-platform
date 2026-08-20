@@ -132,8 +132,27 @@
 
 .invoice-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 40px;
+}
+
+.invoice-notice,
+.invoice-error {
+  flex-basis: 100%;
+  margin: 0;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.invoice-notice {
+  color: #92400e;
+  background: #fef3c7;
+}
+
+.invoice-error {
+  color: #991b1b;
+  background: #fee2e2;
 }
 
 .invoice-actions .button,
@@ -149,9 +168,14 @@
 }
 
 .invoice-actions button {
-  color: var(--text);
-  background: var(--border);
-  cursor: not-allowed;
+  color: white;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.invoice-actions button:disabled {
+  opacity: 0.65;
+  cursor: wait;
 }
 
 @media (prefers-color-scheme: dark) {

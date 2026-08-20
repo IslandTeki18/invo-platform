@@ -1,5 +1,5 @@
-import { useEffect } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useEffect, useState } from "react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { api } from "@repo/backend/convex/_generated/api";
 import type { Id } from "@repo/backend/convex/_generated/dataModel";
@@ -19,6 +19,8 @@ function StatusBanner({
   dueDate?: number;
   paidAt?: number;
 }) {
+  const [now] = useState(Date.now);
+
   if (status === "PAID") {
     return <div className="invoice-banner invoice-banner--green">Paid on {formatDate(paidAt)}</div>;
   }
@@ -29,7 +31,7 @@ function StatusBanner({
     return <div className="invoice-banner invoice-banner--gray">Draft</div>;
   }
 
-  const overdue = dueDate != null && dueDate < Date.now();
+  const overdue = dueDate != null && dueDate < now;
   return (
     <div className="invoice-banner invoice-banner--yellow">
       {overdue ? "Overdue" : "Unpaid"}
@@ -46,6 +48,22 @@ export default function InvoicePage() {
   const args = id && token ? { invoiceId: id, token } : "skip";
   const invoice = useQuery(api.invoices.getPublic, args);
   const recordView = useMutation(api.invoices.recordView);
+  const createCheckout = useAction(api.actions.stripe.createCheckoutSession);
+  const [paying, setPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState(false);
+
+  async function handlePayment() {
+    if (!id || !token) return;
+    setPaying(true);
+    setPaymentError(false);
+    try {
+      const { url } = await createCheckout({ invoiceId: id, token });
+      window.location.assign(url);
+    } catch {
+      setPaymentError(true);
+      setPaying(false);
+    }
+  }
 
   useEffect(() => {
     if (!id || !token) return;
@@ -197,13 +215,21 @@ export default function InvoicePage() {
 
       {payable && (
         <div className="invoice-actions">
+          {searchParams.get("payment") === "cancelled" && (
+            <p className="invoice-notice">Payment not completed. You can try again below.</p>
+          )}
+          {paymentError && (
+            <p className="invoice-error" role="alert">
+              Unable to start payment. Try again.
+            </p>
+          )}
           {invoice.pdfUrl && (
             <a className="button" href={invoice.pdfUrl} target="_blank" rel="noreferrer">
               Download PDF
             </a>
           )}
-          <button type="button" disabled>
-            Pay invoice
+          <button type="button" disabled={paying} onClick={() => void handlePayment()}>
+            {paying ? "Opening checkout…" : `Pay ${formatMoney(invoice.total)}`}
           </button>
         </div>
       )}
