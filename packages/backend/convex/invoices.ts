@@ -178,7 +178,7 @@ async function resolveExpenseSnapshots(
   return snapshots;
 }
 
-async function resolvePublicInvoice(
+export async function resolvePublicInvoice(
   ctx: { db: DatabaseReader },
   invoiceId: Id<"invoices">,
   token: string,

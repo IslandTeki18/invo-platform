@@ -22,6 +22,7 @@ import type * as lib_validators from "../lib/validators.js";
 import type * as memberships from "../memberships.js";
 import type * as onboarding from "../onboarding.js";
 import type * as organizations from "../organizations.js";
+import type * as payments from "../payments.js";
 import type * as users from "../users.js";
 
 import type {
@@ -45,6 +46,7 @@ declare const fullApi: ApiFromModules<{
   memberships: typeof memberships;
   onboarding: typeof onboarding;
   organizations: typeof organizations;
+  payments: typeof payments;
   users: typeof users;
 }>;
 
