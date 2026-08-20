@@ -12,6 +12,7 @@ import type * as actions_email from "../actions/email.js";
 import type * as actions_emailTemplate from "../actions/emailTemplate.js";
 import type * as actions_pdf from "../actions/pdf.js";
 import type * as actions_pdfTemplate from "../actions/pdfTemplate.js";
+import type * as actions_stripe from "../actions/stripe.js";
 import type * as clients from "../clients.js";
 import type * as expenses from "../expenses.js";
 import type * as internal_ from "../internal.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   "actions/emailTemplate": typeof actions_emailTemplate;
   "actions/pdf": typeof actions_pdf;
   "actions/pdfTemplate": typeof actions_pdfTemplate;
+  "actions/stripe": typeof actions_stripe;
   clients: typeof clients;
   expenses: typeof expenses;
   internal: typeof internal_;
