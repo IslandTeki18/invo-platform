@@ -754,43 +754,43 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 17. Public invoice viewer
 
 ### 17.1 Routing (within marketing app)
-- [ ] Add `/invoice/:invoiceId` route to marketing app router (react router)
-- [ ] Read `token` from query string
-- [ ] Resolve invoice by invoiceId + token
+- [x] Add `/invoice/:invoiceId` route to marketing app router (react router)
+- [x] Read `token` from query string
+- [x] Resolve invoice by invoiceId + token
 
 ### 17.2 Access validation
-- [ ] Reject invalid token
-- [ ] Reject token/invoice mismatch
-- [ ] Reject missing invoice
-- [ ] Handle void state correctly
+- [x] Reject invalid token
+- [x] Reject token/invoice mismatch
+- [x] Reject missing invoice
+- [x] Handle void state correctly
 
 ### 17.3 Viewer rendering
-- [ ] Render invoice header and branding
-- [ ] Render client information
-- [ ] Render line items
-- [ ] Render expenses
-- [ ] Render totals
-- [ ] Render attachments
-- [ ] Render line-item images
-- [ ] Render pay button
-- [ ] Render dark mode/system theme support
+- [x] Render invoice header and branding (uploads deferred to section 22)
+- [x] Render client information
+- [x] Render line items
+- [x] Render expenses
+- [x] Render totals
+- [x] Render attachments (uploads deferred to section 22)
+- [x] Render line-item images (uploads deferred to section 22)
+- [x] Render pay button (disabled until section 18)
+- [x] Render dark mode/system theme support
 
 ### 17.4 Status banners
-- [ ] Gray banner for draft if ever visible internally
-- [ ] Yellow banner for unpaid
-- [ ] Green banner for paid
-- [ ] Red banner for void
+- [x] Gray banner for draft if ever visible internally
+- [x] Yellow banner for unpaid
+- [x] Green banner for paid
+- [x] Red banner for void
 
 ### 17.5 View tracking
-- [ ] Record first-view timestamp
-- [ ] Transition `sent -> viewed` on first successful load
-- [ ] Record every subsequent view event
-- [ ] Keep view data internal for V1
+- [x] Record first-view timestamp (IP unavailable from Convex functions)
+- [x] Transition `sent -> viewed` on first successful load
+- [x] Record every subsequent view event
+- [x] Keep view data internal for V1
 
 ### 17.6 PDF download rules
-- [ ] Allow PDF download only when invoice unpaid
-- [ ] Block PDF download when paid if following spec strictly
-- [ ] Block PDF download when void if required by policy
+- [x] Allow PDF download only when invoice unpaid
+- [x] Block PDF download when paid if following spec strictly
+- [x] Block PDF download when void if required by policy
 
 ---
 
@@ -1292,4 +1292,3 @@ Use this as the shortest path to a working product.
 - [ ] Export and organization deletion
 - [ ] Security hardening
 - [ ] E2E and regression testing
-
