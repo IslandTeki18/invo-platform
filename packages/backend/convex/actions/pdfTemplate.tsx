@@ -1,3 +1,5 @@
+"use node";
+
 import React from "react";
 import {
   Document,

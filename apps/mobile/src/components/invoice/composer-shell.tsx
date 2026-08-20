@@ -3,8 +3,8 @@ import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } f
 import { useRouter } from 'expo-router';
 import { useMutation } from 'convex/react';
 
-import { api } from '../../../../../convex/_generated/api';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
 
 import { Spacing } from '@/constants/theme';
 import { ThemedText } from '@/components/primitives/themed-text';

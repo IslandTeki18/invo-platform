@@ -18,9 +18,10 @@ packages/
   types/       — Shared enums, DTOs, constants (@repo/types)
   utils/       — Shared logic: invoice math, permissions, validation, token helpers (@repo/utils)
   ui/          — Shared UI components (@repo/ui)
+  backend/     — Convex functions, schema, actions (@repo/backend); run `convex dev` here
 ```
 
-Package aliases resolve via root `tsconfig.json` paths: `@repo/types`, `@repo/ui`, `@repo/utils` → `packages/*/src`.
+Package aliases resolve via root `tsconfig.json` paths: `@repo/types`, `@repo/ui`, `@repo/utils` → `packages/*/src`; `@repo/backend/*` → `packages/backend/*`.
 
 Mobile app uses `@/*` → `./src/*` and `@/assets/*` → `./assets/*`.
 
@@ -129,11 +130,11 @@ Valid transitions only: `draft→sent`, `sent→viewed`, `sent/viewed→paid`, `
 
 ## Convex Patterns
 
-- Auth guards are higher-order wrappers in `convex/lib/auth.ts`.
+- Auth guards are higher-order wrappers in `packages/backend/convex/lib/auth.ts`.
 - Error format: `ConvexError({ code, message })` with codes `UNAUTHENTICATED`, `USER_NOT_FOUND`, `FORBIDDEN`.
 - User bootstrap: client-side Convex mutation on first auth (no webhook). Race-safe with unique constraint on clerkId.
 - Admin check: `publicMetadata.isAdmin` from Clerk JWT identity.
-- All indexes are defined in `convex/schema.ts`. Check existing indexes before adding queries.
+- All indexes are defined in `packages/backend/convex/schema.ts`. Check existing indexes before adding queries.
 
 ## Current Implementation Status
 
@@ -147,7 +148,7 @@ Reference `docs/TASKS.md` for the full checklist with completion status.
 
 ## File Conventions
 
-- Convex functions: `convex/` directory. Mutations, queries, and actions follow Convex conventions.
+- Convex functions: `packages/backend/convex/` directory. Mutations, queries, and actions follow Convex conventions.
 - Shared logic goes in `packages/utils/src/`. Pure functions, no framework dependencies.
 - Shared types go in `packages/types/src/`. Enums, DTOs, constants.
 - Mobile screens: `apps/mobile/src/` with expo-router file-based routing.
@@ -159,8 +160,8 @@ Reference `docs/TASKS.md` for the full checklist with completion status.
 1. **Read the decision doc first** if your task touches domains, Stripe, Clerk, file storage, PDF, or deletion behavior.
 2. **Check `packages/types/src/`** before defining new types — it likely already exists.
 3. **Check `packages/utils/src/`** before writing helpers — permission checks, money math, validation, token generation, rate limit logic, and status checks are already implemented and tested.
-4. **Check `convex/schema.ts`** before creating tables or indexes — the full schema is already defined.
+4. **Check `packages/backend/convex/schema.ts`** before creating tables or indexes — the full schema is already defined.
 5. **Never duplicate invoice math.** Import from `@repo/utils`.
 6. **Recalculate totals server-side** on every invoice save. Never trust client-computed totals.
-7. **Use existing auth guard wrappers** from `convex/lib/auth.ts` for all mutations and queries requiring auth.
+7. **Use existing auth guard wrappers** from `packages/backend/convex/lib/auth.ts` for all mutations and queries requiring auth.
 8. **Test against existing test patterns** in `packages/utils/src/` when adding new shared logic.

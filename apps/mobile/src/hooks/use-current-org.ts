@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQuery } from "convex/react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { api } from "../../../../convex/_generated/api";
+import { api } from "@repo/backend/convex/_generated/api";
 
 const STORAGE_KEY = "invo:currentOrgId";
 

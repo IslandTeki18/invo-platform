@@ -1,6 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { query } from "./_generated/server";
-import { requireAuth, requireOrgMember } from "./lib/auth";
+import { requireOrgMember } from "./lib/auth";
 
 /**
  * Get the onboarding status for a specific organization.
@@ -16,7 +16,7 @@ export const getStatus = query({
     orgId: v.id("organizations"),
   },
   handler: async (ctx, args) => {
-    const { membership } = await requireOrgMember(ctx, args.orgId);
+    await requireOrgMember(ctx, args.orgId);
 
     const org = await ctx.db.get(args.orgId);
     if (!org) {

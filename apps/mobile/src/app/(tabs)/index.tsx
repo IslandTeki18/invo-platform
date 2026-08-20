@@ -4,8 +4,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation } from 'convex/react';
 
-import { api } from '../../../../../convex/_generated/api';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
 import { formatMoney } from '@repo/utils';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useCurrentOrg } from '@/hooks/use-current-org';
@@ -159,7 +159,7 @@ export default function DashboardScreen() {
               <InvoiceRow
                 key={item._id}
                 invoice={item}
-                onPress={() => router.push(`invoices/${item._id}`)}
+                onPress={() => router.push(`/invoices/${item._id}`)}
               />
             ))
           ) : (
@@ -181,7 +181,7 @@ export default function DashboardScreen() {
             <FormButton
               label="New Invoice"
               variant="primary"
-              onPress={() => router.push('invoices/new')}
+              onPress={() => router.push('/invoices/new')}
             />
             <FormButton
               label="Add Client"

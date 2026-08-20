@@ -3,7 +3,7 @@ import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
 
 export default defineConfig([
-  globalIgnores(["**/dist", "**/node_modules", "**/.turbo", "**/.expo"]),
+  globalIgnores(["**/dist", "**/node_modules", "**/.turbo", "**/.expo", "**/_generated"]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [js.configs.recommended, tseslint.configs.recommended],

@@ -1,0 +1,21 @@
+{
+  "name": "@repo/backend",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "convex dev",
+    "deploy": "convex deploy",
+    "typecheck": "tsc --noEmit -p convex/tsconfig.json",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@react-pdf/renderer": "^4.3.2",
+    "convex": "^1.33.1",
+    "resend": "^6.9.4"
+  },
+  "devDependencies": {
+    "@repo/types": "workspace:*",
+    "@repo/utils": "workspace:*",
+    "typescript": "~5.9.3"
+  }
+}

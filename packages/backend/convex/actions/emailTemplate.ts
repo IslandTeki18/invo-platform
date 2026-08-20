@@ -1,3 +1,5 @@
+"use node";
+
 import type { InvoiceSendEmailData } from "@repo/types";
 import { formatMoney } from "@repo/utils";
 

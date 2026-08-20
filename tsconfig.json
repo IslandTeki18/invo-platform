@@ -2,9 +2,18 @@
   "compilerOptions": {
     "baseUrl": ".",
     "paths": {
-      "@repo/types": ["packages/types/src"],
-      "@repo/ui": ["packages/ui/src"],
-      "@repo/utils": ["packages/utils/src"]
+      "@repo/types": [
+        "packages/types/src"
+      ],
+      "@repo/ui": [
+        "packages/ui/src"
+      ],
+      "@repo/utils": [
+        "packages/utils/src"
+      ],
+      "@repo/backend/*": [
+        "packages/backend/*"
+      ]
     }
   }
 }

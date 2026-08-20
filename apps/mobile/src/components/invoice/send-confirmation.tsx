@@ -26,7 +26,7 @@ export function SendConfirmation({
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Send Invoice?">
       <View style={styles.content}>
-        <ThemedText type="body">
+        <ThemedText>
           Send invoice for {formatMoney(total)} to {clientName}?
         </ThemedText>
 

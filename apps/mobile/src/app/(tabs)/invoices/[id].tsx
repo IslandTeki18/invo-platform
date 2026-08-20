@@ -4,8 +4,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 
 import { InvoiceStatus } from '@repo/types';
-import { api } from '../../../../../../convex/_generated/api';
-import type { Id } from '../../../../../../convex/_generated/dataModel';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
 import { useCurrentOrg } from '@/hooks/use-current-org';
 import { useInvoiceForm } from '@/hooks/use-invoice-form';
 import { ComposerShell } from '@/components/invoice/composer-shell';

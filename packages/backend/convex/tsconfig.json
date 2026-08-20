@@ -11,10 +11,10 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "paths": {
-      "@repo/types": ["../packages/types/src"],
-      "@repo/utils": ["../packages/utils/src"]
+      "@repo/types": ["../../types/src"],
+      "@repo/utils": ["../../utils/src"]
     }
   },
   "include": ["./**/*.ts", "./**/*.tsx"],
-  "exclude": ["../_generated"]
+  "exclude": ["./_generated"]
 }

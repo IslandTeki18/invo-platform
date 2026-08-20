@@ -29,7 +29,7 @@ export const generate = internalAction({
       );
 
       // Store in Convex file storage
-      const blob = new Blob([buffer], { type: "application/pdf" });
+      const blob = new Blob([new Uint8Array(buffer)], { type: "application/pdf" });
       const storageId = await ctx.storage.store(blob);
 
       // Link the PDF file to the invoice

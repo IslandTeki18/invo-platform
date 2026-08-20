@@ -2,13 +2,12 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useQuery, useMutation } from 'convex/react';
-import { api } from '../../../../../convex/_generated/api';
-import type { Id } from '../../../../../convex/_generated/dataModel';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
 
 import { Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { ThemedText } from '@/components/primitives/themed-text';
-import { ThemedView } from '@/components/primitives/themed-view';
 import { FormField, FormButton } from '@/components/form';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { SearchableList } from '@/components/ui/searchable-list';

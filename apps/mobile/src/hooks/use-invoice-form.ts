@@ -1,8 +1,8 @@
 import { useCallback, useMemo, useReducer, useRef } from "react";
 import { useMutation } from "convex/react";
 import { useRouter } from "expo-router";
-import { api } from "../../../../convex/_generated/api";
-import type { Id } from "../../../../convex/_generated/dataModel";
+import { api } from "@repo/backend/convex/_generated/api";
+import type { Id } from "@repo/backend/convex/_generated/dataModel";
 import {
   calculateInvoiceTotal,
   centsToDollars,

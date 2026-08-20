@@ -17,6 +17,9 @@
       ],
       "@repo/ui": [
         "../../packages/ui/src"
+      ],
+      "@repo/backend/*": [
+        "../../packages/backend/*"
       ]
     }
   },

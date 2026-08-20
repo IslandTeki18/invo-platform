@@ -12,7 +12,6 @@ import {
 } from "@repo/types";
 import { buildInvoiceSendHtml } from "./emailTemplate";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const sendInvoiceEmail = internalAction({
   args: { invoiceId: v.id("invoices") },
@@ -64,6 +63,7 @@ export const sendInvoiceEmail = internalAction({
     });
 
     // Send via Resend
+    const resend = new Resend(process.env.RESEND_API_KEY);
     await resend.emails.send({
       from: `${org.name} <invoices@invo.app>`,
       to: [invoice.clientSnapshot.email],

@@ -11,8 +11,8 @@ import { useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 
 import { InvoiceStatus } from '@repo/types';
-import { api } from '../../../../../../convex/_generated/api';
-import type { Id } from '../../../../../../convex/_generated/dataModel';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useCurrentOrg } from '@/hooks/use-current-org';
 import { useTheme } from '@/hooks/use-theme';
@@ -20,7 +20,7 @@ import { ThemedText } from '@/components/primitives/themed-text';
 import { ThemedView } from '@/components/primitives/themed-view';
 import { EmptyState } from '@/components/ui/empty-state';
 import { FormButton } from '@/components/form';
-import { InvoiceRow, type InvoiceItem } from '@/components/invoice/invoice-row';
+import { InvoiceRow } from '@/components/invoice/invoice-row';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -110,7 +110,7 @@ export default function InvoiceListScreen() {
         <ThemedText type="subtitle">Invoices</ThemedText>
         <FormButton
           label="New Invoice"
-          onPress={() => router.push('invoices/new')}
+          onPress={() => router.push('/invoices/new')}
           variant="primary"
         />
       </View>
@@ -126,7 +126,7 @@ export default function InvoiceListScreen() {
         <EmptyState
           message="No invoices yet"
           actionLabel="Create Invoice"
-          onAction={() => router.push('invoices/new')}
+          onAction={() => router.push('/invoices/new')}
         />
       ) : (
         <SectionList
@@ -135,7 +135,7 @@ export default function InvoiceListScreen() {
           renderItem={({ item }) => (
             <InvoiceRow
               invoice={item}
-              onPress={() => router.push(`invoices/${item._id}`)}
+              onPress={() => router.push(`/invoices/${item._id}`)}
             />
           )}
           renderSectionHeader={({ section }) => (

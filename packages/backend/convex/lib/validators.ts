@@ -15,11 +15,11 @@ import {
 // Generic helper: converts an `as const` enum object into a Convex union
 // ---------------------------------------------------------------------------
 
-function enumValidator<T extends Record<string, string>>(enumObj: T) {
-  const literals = Object.values(enumObj).map((val) => v.literal(val as string));
+function enumValidator<T extends Record<string, string>>(enumObj: T): Validator<T[keyof T], "required", never> {
+  const literals = Object.values(enumObj).map((val) => v.literal(val));
   const [first, second, ...rest] = literals;
-  // v.union requires at least 2 members
-  return v.union(first!, second!, ...rest);
+  // v.union requires at least 2 members; cast narrows the widened `string` union back to the enum's literals
+  return v.union(first!, second!, ...rest) as unknown as Validator<T[keyof T], "required", never>;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,8 +1,9 @@
 import { ACCESS_TOKEN_LENGTH } from "@repo/types";
-import { randomBytes } from "crypto";
+import { generateAccessTokenWeb } from "./token-web";
 
+// Web Crypto only: this module is bundled into the mobile app, where Node's `crypto` does not exist.
 export function generateAccessToken(): string {
-  return randomBytes(ACCESS_TOKEN_LENGTH / 2).toString("hex");
+  return generateAccessTokenWeb();
 }
 
 export function isValidAccessToken(token: string): boolean {
