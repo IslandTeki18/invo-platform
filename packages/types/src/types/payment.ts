@@ -1,4 +1,4 @@
-import type { ManualPaymentMethod } from "../enums/payment";
+import type { PaymentMethod } from "../enums/payment";
 
 export interface CheckoutSession {
   id: string;
@@ -13,7 +13,7 @@ export interface CheckoutSession {
 export interface PaymentRecord {
   id: string;
   invoiceId: string;
-  method: ManualPaymentMethod;
+  method: PaymentMethod;
   amount: number;
   reference: string | null;
   paidAt: number;

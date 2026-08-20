@@ -20,3 +20,6 @@ export const SUBSCRIPTION_PRICING: Record<SubscriptionTier, number> = {
 } as const;
 
 export const ACCESS_TOKEN_LENGTH = 32 as const;
+
+export const INVOICE_CURRENCY = "usd" as const;
+export const STRIPE_PAID_BY = "stripe" as const;

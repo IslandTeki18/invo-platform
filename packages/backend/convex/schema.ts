@@ -6,7 +6,7 @@ import {
   organizationRoleValidator,
   invoiceStatusValidator,
   invitationStatusValidator,
-  manualPaymentMethodValidator,
+  paymentMethodValidator,
   stripeConnectAccountStatusValidator,
   gracePeriodStateValidator,
   businessAddressValidator,
@@ -207,7 +207,7 @@ export default defineSchema({
 
   paymentRecords: defineTable({
     invoiceId: v.id("invoices"),
-    method: manualPaymentMethodValidator,
+    method: paymentMethodValidator,
     amount: v.number(),
     reference: v.optional(v.string()),
     paidAt: v.number(),

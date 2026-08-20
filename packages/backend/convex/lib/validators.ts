@@ -6,7 +6,7 @@ import {
   OrganizationRole,
   InvoiceStatus,
   InvitationStatus,
-  ManualPaymentMethod,
+  PaymentMethod,
   StripeConnectAccountStatus,
   GracePeriodState,
 } from "@repo/types";
@@ -31,7 +31,7 @@ export const subscriptionStatusValidator = enumValidator(SubscriptionStatus);
 export const organizationRoleValidator = enumValidator(OrganizationRole);
 export const invoiceStatusValidator = enumValidator(InvoiceStatus);
 export const invitationStatusValidator = enumValidator(InvitationStatus);
-export const manualPaymentMethodValidator = enumValidator(ManualPaymentMethod);
+export const paymentMethodValidator = enumValidator(PaymentMethod);
 export const stripeConnectAccountStatusValidator = enumValidator(
   StripeConnectAccountStatus,
 );
