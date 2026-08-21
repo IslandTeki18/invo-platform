@@ -8,6 +8,7 @@ import "./index.css";
 import App from "./App.tsx";
 import InvoicePage from "./pages/InvoicePage.tsx";
 import PaymentSuccessPage from "./pages/PaymentSuccessPage.tsx";
+import ConnectReturnPage from "./pages/ConnectReturnPage.tsx";
 
 const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY as string | undefined;
 const CONVEX_URL = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
   { path: "/", element: <App /> },
   { path: "/invoice/:invoiceId", element: <InvoicePage /> },
   { path: "/invoice/:invoiceId/paid", element: <PaymentSuccessPage /> },
+  { path: "/connect/return", element: <ConnectReturnPage /> },
 ]);
 
 createRoot(document.getElementById("root")!).render(

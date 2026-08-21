@@ -28,8 +28,7 @@ export const createCheckoutSession = action({
       });
     }
 
-    const appUrl = process.env.APP_URL?.replace(/\/$/, "");
-    if (!appUrl) throw new Error("Missing APP_URL environment variable");
+    const appUrl = getAppUrl();
 
     const metadata = {
       invoiceId: invoice.invoiceId as string,
@@ -69,13 +68,73 @@ export const createCheckoutSession = action({
   },
 });
 
+function getAppUrl() {
+  const appUrl = process.env.APP_URL?.replace(/\/$/, "");
+  if (!appUrl) throw new Error("Missing APP_URL environment variable");
+  return appUrl;
+}
+
+export const createConnectOnboardingLink = action({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.runQuery(internal.connect.getByOrg, {
+      orgId: args.orgId,
+      requireOwner: true,
+    });
+    const stripe = getStripe();
+
+    let accountId = existing?.stripeAccountId;
+    if (!accountId) {
+      const account = await stripe.accounts.create({
+        type: "express",
+        metadata: { orgId: args.orgId },
+      });
+      accountId = account.id;
+      await ctx.runMutation(internal.connect.upsert, {
+        stripeAccountId: accountId,
+        orgId: args.orgId,
+        chargesEnabled: account.charges_enabled,
+        detailsSubmitted: account.details_submitted,
+      });
+    }
+
+    const returnUrl = `${getAppUrl()}/connect/return`;
+    const link = await stripe.accountLinks.create({
+      account: accountId,
+      type: "account_onboarding",
+      return_url: returnUrl,
+      refresh_url: `${returnUrl}?refresh=1`,
+    });
+    return { url: link.url };
+  },
+});
+
+export const refreshConnectStatus = action({
+  args: { orgId: v.id("organizations") },
+  handler: async (ctx, args) => {
+    const existing = await ctx.runQuery(internal.connect.getByOrg, {
+      orgId: args.orgId,
+      requireOwner: false,
+    });
+    if (!existing) return null;
+    const account = await getStripe().accounts.retrieve(existing.stripeAccountId);
+    await ctx.runMutation(internal.connect.upsert, {
+      stripeAccountId: account.id,
+      chargesEnabled: account.charges_enabled,
+      detailsSubmitted: account.details_submitted,
+    });
+    return { chargesEnabled: account.charges_enabled };
+  },
+});
+
 export const handleWebhook = internalAction({
   args: {
     payload: v.string(),
     signature: v.string(),
+    secretEnvVar: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const webhookSecret = process.env[args.secretEnvVar ?? "STRIPE_WEBHOOK_SECRET"];
     if (!webhookSecret) return { ok: false };
 
     let event: Stripe.Event;
@@ -109,6 +168,15 @@ export const handleWebhook = internalAction({
     } else if (event.type === StripeWebhookEventType.CHECKOUT_SESSION_EXPIRED) {
       await ctx.runMutation(internal.payments.expireCheckout, {
         stripeSessionId: event.data.object.id,
+      });
+    } else if (event.type === StripeWebhookEventType.ACCOUNT_UPDATED) {
+      const account = event.data.object;
+      const orgId = account.metadata?.orgId;
+      await ctx.runMutation(internal.connect.upsert, {
+        stripeAccountId: account.id,
+        orgId: orgId ? (orgId as Id<"organizations">) : undefined,
+        chargesEnabled: account.charges_enabled ?? false,
+        detailsSubmitted: account.details_submitted ?? false,
       });
     }
 
