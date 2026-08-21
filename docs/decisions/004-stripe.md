@@ -92,7 +92,9 @@ This document records the confirmed decisions for how Stripe is integrated into 
 **Implementation notes:**
 - Onboarding flow: platform creates an Express account, generates an account link, redirects user to Stripe-hosted onboarding, handles return/refresh URLs.
 - Webhook events required: `account.updated` (to track onboarding completion and capabilities)
-- Env vars: `STRIPE_CONNECT_CLIENT_ID` (for Connect), `STRIPE_SECRET_KEY`
+- Env vars: `STRIPE_CONNECT_CLIENT_ID` (for Connect), `STRIPE_SECRET_KEY`, `STRIPE_CONNECT_WEBHOOK_SECRET`
+- Connect events arrive on a separate Stripe endpoint ("Listen to events on Connected accounts") pointed at `POST /stripe/connect-webhook`, verified with `STRIPE_CONNECT_WEBHOOK_SECRET`.
+- Account link return/refresh URL: `{APP_URL}/connect/return` (marketing app), which redirects to `mobile://more/setup`. The mobile app calls `refreshConnectStatus` when the browser session closes, so local development works without Connect webhooks.
 
 ---
 
@@ -158,6 +160,7 @@ STRIPE_SECRET_KEY
 STRIPE_WEBHOOK_SECRET
 STRIPE_CUSTOMER_PORTAL_URL
 STRIPE_CONNECT_CLIENT_ID
+STRIPE_CONNECT_WEBHOOK_SECRET
 ```
 
 ---

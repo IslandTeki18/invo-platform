@@ -458,10 +458,10 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [ ] Enforce send block if onboarding incomplete
 
 ### 7.3 UI
-- [ ] Build onboarding checklist screen in mobile app
-- [ ] Add business information form
-- [ ] Add Stripe connection action/state UI
-- [ ] Add completion indicators
+- [x] Build onboarding checklist screen in mobile app
+- [x] Add business information form
+- [x] Add Stripe connection action/state UI — Connect backend (`convex/connect.ts`, `createConnectOnboardingLink`, `refreshConnectStatus`, `account.updated` webhook at `/stripe/connect-webhook`) added here; satisfies decision 004 4d implementation notes
+- [x] Add completion indicators
 
 ---
 
@@ -491,10 +491,10 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Support viewing archived clients separately
 
 ### 8.4 UI
-- [ ] Build client list screen
-- [ ] Build create client screen
-- [ ] Build edit client screen
-- [ ] Build archive/restore controls
+- [x] Build client list screen
+- [x] Build create client screen
+- [x] Build edit client screen
+- [x] Build archive/restore controls
 
 ---
 
@@ -516,9 +516,9 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Add list presets query
 
 ### 9.3 UI
-- [ ] Build item preset list
-- [ ] Build create/edit preset flow
-- [ ] Build preset picker inside invoice editor
+- [x] Build item preset list
+- [x] Build create/edit preset flow
+- [x] Build preset picker inside invoice editor
 
 ### 9.4 Safety
 - [x] Verify deleting preset does not mutate existing invoices
@@ -540,10 +540,10 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Add list expenses query
 
 ### 10.3 UI
-- [ ] Build expense list screen
-- [ ] Build create expense screen
-- [ ] Build edit expense screen
-- [ ] Build expense picker in invoice composer
+- [x] Build expense list screen
+- [x] Build create expense screen
+- [x] Build edit expense screen
+- [x] Build expense picker in invoice composer
 
 ### 10.4 Rules
 - [x] Ensure each attached expense is duplicated into invoice snapshot
