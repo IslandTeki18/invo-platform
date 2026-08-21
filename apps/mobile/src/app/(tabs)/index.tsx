@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { FormButton, FormField } from '@/components/form';
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { InvoiceRow, type InvoiceItem } from '@/components/invoice/invoice-row';
+import { OnboardingCard } from '@/components/onboarding/onboarding-card';
 
 // ---------------------------------------------------------------------------
 // Screen
@@ -30,6 +31,11 @@ export default function DashboardScreen() {
   // Dashboard data
   const summary = useQuery(
     api.invoices.getDashboardSummary,
+    currentOrg ? { orgId: currentOrg._id as Id<'organizations'> } : 'skip',
+  );
+
+  const onboarding = useQuery(
+    api.onboarding.getStatus,
     currentOrg ? { orgId: currentOrg._id as Id<'organizations'> } : 'skip',
   );
 
@@ -122,6 +128,8 @@ export default function DashboardScreen() {
         >
           <ThemedText type="subtitle">Dashboard</ThemedText>
         </View>
+
+        {onboarding && !onboarding.readyToSendInvoice ? <OnboardingCard /> : null}
 
         {/* Metric cards */}
         <View style={styles.metricsRow}>
