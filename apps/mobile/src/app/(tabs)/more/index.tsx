@@ -59,6 +59,7 @@ export default function MoreScreen() {
           detail={completed === null ? undefined : `${completed} of ${TOTAL_SETUP_STEPS} complete`}
           href="/more/setup"
         />
+        <HubRow label="Items" detail="Reusable line items" href="/more/items" />
       </ScrollView>
     </ThemedView>
   );
