@@ -60,6 +60,7 @@ export default function MoreScreen() {
           href="/more/setup"
         />
         <HubRow label="Items" detail="Reusable line items" href="/more/items" />
+        <HubRow label="Expenses" detail="Attachable to invoices" href="/more/expenses" />
       </ScrollView>
     </ThemedView>
   );
