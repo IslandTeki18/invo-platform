@@ -14,6 +14,7 @@ import type * as actions_pdf from "../actions/pdf.js";
 import type * as actions_pdfTemplate from "../actions/pdfTemplate.js";
 import type * as actions_stripe from "../actions/stripe.js";
 import type * as clients from "../clients.js";
+import type * as connect from "../connect.js";
 import type * as expenses from "../expenses.js";
 import type * as http from "../http.js";
 import type * as internal_ from "../internal.js";
@@ -40,6 +41,7 @@ declare const fullApi: ApiFromModules<{
   "actions/pdfTemplate": typeof actions_pdfTemplate;
   "actions/stripe": typeof actions_stripe;
   clients: typeof clients;
+  connect: typeof connect;
   expenses: typeof expenses;
   http: typeof http;
   internal: typeof internal_;
