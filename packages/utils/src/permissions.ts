@@ -4,6 +4,10 @@ export function canSendInvoice(role: OrganizationRole): boolean {
   return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
 }
 
+export function canRecordManualPayment(role: OrganizationRole): boolean {
+  return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
+}
+
 export function canManageMembers(role: OrganizationRole): boolean {
   return role === OrganizationRole.OWNER || role === OrganizationRole.ADMIN;
 }
