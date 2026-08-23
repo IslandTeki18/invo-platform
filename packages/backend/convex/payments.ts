@@ -1,8 +1,10 @@
-import { v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
-import { canAcceptPayment, isValidStatusTransition } from "@repo/utils";
+import { ConvexError, v } from "convex/values";
+import { internalMutation, internalQuery, mutation } from "./_generated/server";
+import { canAcceptPayment, canRecordManualPayment, isValidStatusTransition } from "@repo/utils";
 import { InvoiceStatus, LogEventType, PaymentMethod, STRIPE_PAID_BY } from "@repo/types";
 import { resolvePublicInvoice } from "./invoices";
+import { requireOrgMember } from "./lib/auth";
+import { manualPaymentMethodValidator } from "./lib/validators";
 
 export const getForCheckout = internalQuery({
   args: {
@@ -175,5 +177,73 @@ export const expireCheckout = internalMutation({
       metadata: { stripeSessionId: args.stripeSessionId, reason: "expired" },
       createdAt: now,
     });
+  },
+});
+
+export const recordManualPayment = mutation({
+  args: {
+    invoiceId: v.id("invoices"),
+    method: manualPaymentMethodValidator,
+    reference: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const invoice = await ctx.db.get(args.invoiceId);
+    if (!invoice) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Invoice not found." });
+    }
+
+    const { user, membership } = await requireOrgMember(ctx, invoice.orgId);
+    if (!canRecordManualPayment(membership.role)) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission to record payments.",
+      });
+    }
+
+    if (!isValidStatusTransition(invoice.status, InvoiceStatus.PAID)) {
+      throw new ConvexError({
+        code: "VALIDATION_ERROR",
+        message: "Only sent or viewed invoices can be marked paid.",
+      });
+    }
+
+    const now = Date.now();
+    const reference = args.reference?.trim() || undefined;
+
+    await ctx.db.patch(invoice._id, {
+      status: InvoiceStatus.PAID,
+      paidAt: now,
+      updatedAt: now,
+    });
+    await ctx.db.insert("paymentRecords", {
+      invoiceId: invoice._id,
+      method: args.method,
+      amount: invoice.total,
+      reference,
+      paidAt: now,
+      paidBy: user._id as string,
+    });
+
+    const metadata = { method: args.method, reference, amount: invoice.total };
+    await Promise.all([
+      ctx.db.insert("logs", {
+        eventType: LogEventType.INVOICE_PAID,
+        actorId: user._id as string,
+        orgId: invoice.orgId as string,
+        entityType: "invoice",
+        entityId: invoice._id as string,
+        metadata,
+        createdAt: now,
+      }),
+      ctx.db.insert("logs", {
+        eventType: LogEventType.PAYMENT_MANUAL_RECORDED,
+        actorId: user._id as string,
+        orgId: invoice.orgId as string,
+        entityType: "invoice",
+        entityId: invoice._id as string,
+        metadata,
+        createdAt: now,
+      }),
+    ]);
   },
 });
