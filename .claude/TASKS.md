@@ -287,7 +287,7 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 - [x] Wire `VITE_CLERK_PUBLISHABLE_KEY` env var in admin and marketing apps
 - [x] Wire `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` env var in mobile app
 - [ ] Configure Clerk Dashboard: enable email+password, Google OAuth, Apple Sign-In
-- [ ] Integrate Clerk in mobile app (sign-in/sign-up screens)
+- [x] Integrate Clerk in mobile app (sign-in/sign-up screens)
 - [ ] Integrate Clerk in marketing site auth entry points
 - [ ] Integrate Clerk in admin panel
 - [ ] Integrate Clerk in invite acceptance page
