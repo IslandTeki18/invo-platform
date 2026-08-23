@@ -1,11 +1,16 @@
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useMutation } from 'convex/react';
 
-import type { Discount } from '@repo/types';
-import { formatMoney, applyDiscount } from '@repo/utils';
+import { api } from '@repo/backend/convex/_generated/api';
+import type { Id } from '@repo/backend/convex/_generated/dataModel';
+import type { Discount, InvoiceStatus, ManualPaymentMethod } from '@repo/types';
+import { formatMoney, applyDiscount, canAcceptPayment } from '@repo/utils';
 import { BottomTabInset, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { FormButton } from '@/components/form';
+import { MarkPaidSheet } from '@/components/invoice/mark-paid-sheet';
 import { ThemedText } from '@/components/primitives/themed-text';
 import { ThemedView } from '@/components/primitives/themed-view';
 import { StatusBadge } from '@/components/invoice/status-badge';
@@ -58,10 +63,34 @@ type InvoiceDetailProps = {
 export function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const recordManualPayment = useMutation(api.payments.recordManualPayment);
 
   const discountedSubtotal = applyDiscount(
     invoice.subtotal,
     invoice.discount ?? null,
+  );
+
+  const handleMarkPaid = useCallback(
+    async (input: { method: ManualPaymentMethod; reference?: string }) => {
+      setIsSubmitting(true);
+      try {
+        await recordManualPayment({
+          invoiceId: invoice._id as Id<'invoices'>,
+          ...input,
+        });
+        setSheetVisible(false);
+      } catch (error) {
+        Alert.alert(
+          'Mark Paid Failed',
+          error instanceof Error ? error.message : 'Failed to record payment.',
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [invoice._id, recordManualPayment],
   );
 
   return (
@@ -235,7 +264,23 @@ export function InvoiceDetail({ invoice, onBack }: InvoiceDetailProps) {
             </View>
           ) : null}
         </ThemedView>
+
+        {canAcceptPayment(invoice.status as InvoiceStatus) ? (
+          <FormButton
+            label="Mark as Paid"
+            onPress={() => setSheetVisible(true)}
+            variant="primary"
+          />
+        ) : null}
       </ScrollView>
+
+      <MarkPaidSheet
+        visible={sheetVisible}
+        onClose={() => setSheetVisible(false)}
+        onConfirm={handleMarkPaid}
+        isSubmitting={isSubmitting}
+        total={invoice.total}
+      />
     </ThemedView>
   );
 }
