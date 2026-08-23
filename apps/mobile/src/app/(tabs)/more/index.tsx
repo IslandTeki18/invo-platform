@@ -1,5 +1,7 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '@clerk/clerk-expo';
 import { useRouter, type Href } from 'expo-router';
 import { useQuery } from 'convex/react';
 
@@ -40,6 +42,7 @@ function HubRow({ label, detail, href }: { label: string; detail?: string; href:
 }
 
 export default function MoreScreen() {
+  const { signOut } = useAuth();
   const { currentOrg } = useCurrentOrg();
   const status = useQuery(
     api.onboarding.getStatus,
@@ -61,6 +64,18 @@ export default function MoreScreen() {
         />
         <HubRow label="Items" detail="Reusable line items" href="/more/items" />
         <HubRow label="Expenses" detail="Attachable to invoices" href="/more/expenses" />
+        <Pressable
+          onPress={async () => {
+            await AsyncStorage.removeItem('invo:currentOrgId');
+            await signOut();
+          }}
+          style={({ pressed }) => [
+            styles.row,
+            pressed && { opacity: 0.6 },
+          ]}
+        >
+          <ThemedText themeColor="destructive">Sign out</ThemedText>
+        </Pressable>
       </ScrollView>
     </ThemedView>
   );
