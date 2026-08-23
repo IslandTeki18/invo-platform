@@ -3,12 +3,13 @@ import { ClerkProvider, useAuth } from '@clerk/clerk-expo';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ConvexReactClient } from 'convex/react';
 import * as SecureStore from 'expo-secure-store';
-import React from 'react';
-import { useColorScheme } from 'react-native';
+import React, { useEffect } from 'react';
+import { ActivityIndicator, StyleSheet, useColorScheme, View } from 'react-native';
 
-import { Slot } from 'expo-router';
+import { Slot, useRouter, useSegments } from 'expo-router';
 
 import { AnimatedSplashOverlay } from '@/components/animated-icon/animated-icon';
+import { useBootstrapUser } from '@/hooks/use-bootstrap-user';
 
 const CONVEX_URL = process.env.EXPO_PUBLIC_CONVEX_URL!;
 
@@ -23,6 +24,34 @@ const tokenCache = {
   },
 };
 
+function AuthGate() {
+  const { isLoaded, isSignedIn } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+  const { isReady } = useBootstrapUser();
+
+  useEffect(() => {
+    if (!isLoaded || (isSignedIn && !isReady)) return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+    if (!isSignedIn && !inAuthGroup) {
+      router.replace('/(auth)/sign-in');
+    } else if (isSignedIn && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [isLoaded, isReady, isSignedIn, router, segments]);
+
+  if (!isLoaded || (isSignedIn && !isReady)) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator />
+      </View>
+    );
+  }
+
+  return <Slot />;
+}
+
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   return (
@@ -30,9 +59,13 @@ export default function RootLayout() {
       <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
           <AnimatedSplashOverlay />
-          <Slot />
+          <AuthGate />
         </ThemeProvider>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+});

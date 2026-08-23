@@ -13,6 +13,7 @@ export type FormFieldProps = {
   keyboardType?: KeyboardTypeOptions;
   multiline?: boolean;
   editable?: boolean;
+  secureTextEntry?: boolean;
 };
 
 export function FormField({
@@ -24,6 +25,7 @@ export function FormField({
   keyboardType,
   multiline = false,
   editable = true,
+  secureTextEntry = false,
 }: FormFieldProps) {
   const theme = useTheme();
 
@@ -40,6 +42,7 @@ export function FormField({
         keyboardType={keyboardType}
         multiline={multiline}
         editable={editable}
+        secureTextEntry={secureTextEntry}
         style={[
           styles.input,
           {
