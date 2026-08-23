@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
 /**
@@ -6,21 +6,24 @@ import { mutation, query } from "./_generated/server";
  * does not already exist for the authenticated Clerk user.
  *
  * Idempotent — safe to call on every login. If a user record already exists
- * for the given clerkId, it returns the existing record's ID without mutation.
+ * for the authenticated Clerk user, it returns the existing record's ID without
+ * mutation.
  *
  * Race-condition handling: two simultaneous first-logins for the same Clerk
  * user will both query by clerkId. The first to write wins; the second sees
  * the existing record and returns early.
  */
 export const bootstrap = mutation({
-  args: {
-    clerkId: v.string(),
-    email: v.string(),
-  },
-  handler: async (ctx, args) => {
+  args: {},
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      throw new ConvexError({ code: "UNAUTHENTICATED" });
+    }
+
     const existing = await ctx.db
       .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
       .unique();
 
     if (existing) {
@@ -28,8 +31,8 @@ export const bootstrap = mutation({
     }
 
     const userId = await ctx.db.insert("users", {
-      clerkId: args.clerkId,
-      email: args.email,
+      clerkId: identity.subject,
+      email: identity.email ?? "",
       subscriptionTier: "BASE",
       orgCountLimit: 1,
       createdAt: Date.now(),
