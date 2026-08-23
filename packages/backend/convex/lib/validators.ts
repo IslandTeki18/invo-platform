@@ -7,6 +7,7 @@ import {
   InvoiceStatus,
   InvitationStatus,
   PaymentMethod,
+  ManualPaymentMethod,
   StripeConnectAccountStatus,
   GracePeriodState,
 } from "@repo/types";
@@ -23,7 +24,7 @@ function enumValidator<T extends Record<string, string>>(enumObj: T): Validator<
 }
 
 // ---------------------------------------------------------------------------
-// Enum validators (9)
+// Enum validators (10)
 // ---------------------------------------------------------------------------
 
 export const subscriptionTierValidator = enumValidator(SubscriptionTier);
@@ -32,6 +33,7 @@ export const organizationRoleValidator = enumValidator(OrganizationRole);
 export const invoiceStatusValidator = enumValidator(InvoiceStatus);
 export const invitationStatusValidator = enumValidator(InvitationStatus);
 export const paymentMethodValidator = enumValidator(PaymentMethod);
+export const manualPaymentMethodValidator = enumValidator(ManualPaymentMethod);
 export const stripeConnectAccountStatusValidator = enumValidator(
   StripeConnectAccountStatus,
 );
