@@ -828,17 +828,17 @@ A thorough implementation checklist based on the blueprint. Ordered to reduce re
 ## 19. Manual payment support
 
 ### 19.1 Backend
-- [ ] Add manual mark-paid mutation
-- [ ] Restrict to Owner/Admin as intended
-- [ ] Require payment method: cash/check/other
-- [ ] Store manual payment metadata
-- [ ] Set paid status
-- [ ] Log manual payment action
+- [x] Add manual mark-paid mutation
+- [x] Restrict to Owner/Admin as intended
+- [x] Require payment method: cash/check/other
+- [x] Store manual payment metadata
+- [x] Set paid status
+- [x] Log manual payment action
 
 ### 19.2 Mobile UI
-- [ ] Add mark-paid action in invoice detail
-- [ ] Add payment method prompt
-- [ ] Add confirmation step
+- [x] Add mark-paid action in invoice detail
+- [x] Add payment method prompt
+- [x] Add confirmation step
 
 ---
 
