@@ -58,6 +58,11 @@ export default function MoreScreen() {
       <ScreenHeader title="More" />
       <ScrollView contentContainerStyle={{ paddingBottom: BottomTabInset + Spacing.three }}>
         <HubRow
+          label="Organization"
+          detail={currentOrg ? currentOrg.name : 'None selected'}
+          href="/more/organization"
+        />
+        <HubRow
           label="Setup"
           detail={completed === null ? undefined : `${completed} of ${TOTAL_SETUP_STEPS} complete`}
           href="/more/setup"

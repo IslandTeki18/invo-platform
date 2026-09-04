@@ -100,7 +100,11 @@ export default function DashboardScreen() {
   if (!currentOrg) {
     return (
       <ThemedView style={styles.centered}>
-        <EmptyState message="Select an organization" />
+        <EmptyState
+          message="Create an organization to get started"
+          actionLabel="Create Organization"
+          onAction={() => router.push('/more/organization')}
+        />
       </ThemedView>
     );
   }
